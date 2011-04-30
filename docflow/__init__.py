@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""
+Docflow: Python Document Workflows
+"""
+
 __version__ = '0.1'
 
 from functools import wraps
@@ -19,6 +23,9 @@ class WorkflowPermissionException(WorkflowException):
 
 
 class WorkflowState(object):
+    """
+    State in a workflow.
+    """
     def __init__(self, value, title=u'', description=u''):
         self.value = value
         self.name = None # Not named yet
@@ -84,6 +91,9 @@ class WorkflowState(object):
         return inner
 
 class WorkflowStateGroup(WorkflowState):
+    """
+    Group of states in a workflow.
+    """
     def __repr__(self):
         return '<WorkflowStateGroup %s>' % repr(self.title)
 
@@ -121,6 +131,9 @@ class _InitDocumentWorkflow(type):
 
 
 class DocumentWorkflow(object):
+    """
+    Base class for document workflows.
+    """
     __metaclass__ = _InitDocumentWorkflow
 
     #: State is contained in an attribute on the document

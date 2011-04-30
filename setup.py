@@ -3,8 +3,8 @@ from setuptools import setup, find_packages
 import docflow
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.rst')).read()
-CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
+README = unicode(open(os.path.join(here, 'README.rst')).read(), 'utf-8')
+CHANGES = unicode(open(os.path.join(here, 'CHANGES.rst')).read(), 'utf-8')
 
 requires = [
     ]
@@ -15,9 +15,16 @@ setup(name='docflow',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.2",
+        "Programming Language :: Python :: 2.3",
+        "Programming Language :: Python :: 2.4",
+        "Programming Language :: Python :: 2.5",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
         "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Intended Audience :: Developers",
         "Development Status :: 3 - Alpha",
+        "Topic :: Software Development :: Libraries",
         ],
       author='Kiran Jonnalagadda',
       author_email='jace@pobox.com',

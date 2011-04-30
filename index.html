@@ -1,0 +1,419 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to Docflow’s documentation! &mdash; Docflow v0.1 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Docflow v0.1 documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="#">Docflow v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-docflow-s-documentation">
+<h1><a class="toc-backref" href="#id1">Welcome to Docflow&#8217;s documentation!</a><a class="headerlink" href="#welcome-to-docflow-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>This is the documentation for version 0.1, generated April 30, 2011.</p>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#welcome-to-docflow-s-documentation" id="id1">Welcome to Docflow&#8217;s documentation!</a><ul>
+<li><a class="reference internal" href="#introduction" id="id2">Introduction</a></li>
+<li><a class="reference internal" href="#usage" id="id3">Usage</a></li>
+<li><a class="reference internal" href="#api-documentation" id="id4">API Documentation</a><ul>
+<li><a class="reference internal" href="#package-docflow" id="id5">Package <tt class="xref py py-mod docutils literal"><span class="pre">docflow</span></tt></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables" id="id6">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="introduction">
+<h2><a class="toc-backref" href="#id2">Introduction</a><a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Docflow is an implementation of document workflows in Python. A workflow
+defines <cite>states</cite> and <cite>transitions</cite>. A state is an “end point” associated with
+a document. A transition is a path from one state to another state
+(unidirectional). Docflow was inspired by <a class="reference external" href="http://docs.repoze.org/workflow/">repoze.workflow</a> but aspires
+to be a framework-independent implementation.</p>
+<p>A <cite>document</cite> in Docflow is any Python object. The document&#8217;s workflow is
+defined separately from the document. This is a useful distinction in MVC or
+MTV-based web applications where the model is kept distinct from the view.
+The model is expected to be a dumb container of data while the view contains
+business logic. Workflows sit between view and models, controlling the view&#8217;s
+view of the model.</p>
+</div>
+<div class="section" id="usage">
+<h2><a class="toc-backref" href="#id3">Usage</a><a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>Documents can be defined like any other Python object:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">MyDocument</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mf">0</span>
+<span class="gp">...</span>
+<span class="gp">... </span><span class="n">doc1</span> <span class="o">=</span> <span class="n">MyDocument</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Documents can be simple dictionaries:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">doc2</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;title&#39;</span><span class="p">:</span> <span class="s">&#39;My Document&#39;</span><span class="p">,</span> <span class="s">&#39;status&#39;</span><span class="p">:</span> <span class="mf">0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Or complex entities such as SQLAlchemy</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">DatabaseDocument</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;document&#39;</span>
+<span class="gp">... </span>    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mf">200</span><span class="p">))</span>
+<span class="gp">... </span>    <span class="n">status</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">doc3</span> <span class="o">=</span> <span class="n">DatabaseDocument</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The important part is that the object must have an attribute or key that
+holds the current state, like <tt class="docutils literal"><span class="pre">status</span></tt> in all three examples. The state
+value can be any hashable Python object, typically an integer or string. The
+workflow defines all possible states for this document, the value that
+represents this state, and the transitions between states:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">docflow</span> <span class="kn">import</span> <span class="n">DocumentWorkflow</span><span class="p">,</span> <span class="n">WorkflowState</span><span class="p">,</span> <span class="n">WorkflowStateGroup</span>
+
+<span class="k">class</span> <span class="nc">MyDocumentWorkflow</span><span class="p">(</span><span class="n">DocumentWorkflow</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Workflow for MyDocument</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># Attribute in MyDocument to store status in.</span>
+    <span class="c"># Use ``state_key`` if MyDocument is a dictionary,</span>
+    <span class="c"># as is typical with NoSQL JSON-based databases.</span>
+    <span class="n">state_attr</span> <span class="o">=</span> <span class="s">&#39;status&#39;</span>
+
+    <span class="c"># Define a state. First parameter is the state tracking value,</span>
+    <span class="c"># stored in state_attr.</span>
+    <span class="n">draft</span>     <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Draft&quot;</span><span class="p">,</span>     <span class="n">description</span><span class="o">=</span><span class="s">&quot;Only owner can see it&quot;</span><span class="p">)</span>
+    <span class="n">pending</span>   <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">1</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Pending&quot;</span><span class="p">,</span>   <span class="n">description</span><span class="o">=</span><span class="s">&quot;Pending review&quot;</span><span class="p">)</span>
+    <span class="n">published</span> <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">2</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Published&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s">&quot;Published&quot;</span><span class="p">)</span>
+    <span class="n">withdrawn</span> <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">3</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Withdrawn&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s">&quot;Withdrawn by owner&quot;</span><span class="p">)</span>
+    <span class="n">rejected</span>  <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">4</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Rejected&quot;</span><span class="p">,</span>  <span class="n">description</span><span class="o">=</span><span class="s">&quot;Rejected by reviewer&quot;</span><span class="p">)</span>
+
+    <span class="c"># Define a state group</span>
+    <span class="n">not_published</span> <span class="o">=</span> <span class="n">WorkflowStateGroup</span><span class="p">([</span><span class="mf">0</span><span class="p">,</span> <span class="mf">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Not Published&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">permissions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return permissions available to current user. A permission can be any hashable token.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">context</span> <span class="ow">and</span> <span class="n">context</span><span class="p">[</span><span class="s">&#39;is_admin&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s">&#39;can_publish&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="c"># Define a transition. There can be multiple transitions connecting any two states.</span>
+    <span class="c"># Parameters: newstate, permission, title, description</span>
+    <span class="nd">@draft</span><span class="o">.</span><span class="n">transition</span><span class="p">(</span><span class="n">pending</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&#39;Submit&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">submit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change workflow state from draft to pending.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Do something here</span>
+        <span class="c"># ...</span>
+        <span class="k">pass</span> <span class="c"># State will be changed automatically if we don&#39;t raise an exception</span>
+
+    <span class="nd">@pending</span><span class="o">.</span><span class="n">transition</span><span class="p">(</span><span class="n">published</span><span class="p">,</span> <span class="s">&#39;can_publish&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Publish&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">publish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Publish the document.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Also do something here</span>
+        <span class="c"># ...</span>
+        <span class="k">pass</span>
+</pre></div>
+</div>
+<p>Workflows can extend other workflows to add additional states:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">MyDocumentWorkflowExtraState</span><span class="p">(</span><span class="n">MyDocumentWorkflow</span><span class="p">):</span>
+    <span class="n">expired</span> <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">5</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Expired&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or override settings:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">MyDocumentWorkflowDict</span><span class="p">(</span><span class="n">MyDocumentWorkflow</span><span class="p">):</span>
+    <span class="n">state_attr</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">state_key</span> <span class="o">=</span> <span class="s">&#39;status&#39;</span>
+</pre></div>
+</div>
+<p>Transitions take an optional <tt class="xref py py-attr docutils literal"><span class="pre">context</span></tt> parameter. The same context is
+provided to the <tt class="xref py py-meth docutils literal"><span class="pre">permissions()</span></tt> method to
+determine if the caller has permission to make the transition. Once a workflow
+has been defined, usage is straightforward:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span> <span class="o">=</span> <span class="n">MyDocumentWorkflow</span><span class="p">(</span><span class="n">doc1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">state</span> <span class="ow">is</span> <span class="n">wf</span><span class="o">.</span><span class="n">draft</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">submit</span><span class="p">()</span> <span class="c"># Call a transition</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">state</span> <span class="ow">is</span> <span class="n">wf</span><span class="o">.</span><span class="n">pending</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">draft</span><span class="p">()</span> <span class="c"># Check if state is active</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">pending</span><span class="p">()</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="api-documentation">
+<h2><a class="toc-backref" href="#id4">API Documentation</a><a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="package-docflow">
+<h3><a class="toc-backref" href="#id5">Package <tt class="xref py py-mod docutils literal"><span class="pre">docflow</span></tt></a><a class="headerlink" href="#package-docflow" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="DocumentWorkflow">
+<em class="property">class </em><tt class="descname">DocumentWorkflow</tt><big>(</big><em>document</em><big>)</big><a class="headerlink" href="#DocumentWorkflow" title="Permalink to this definition">¶</a></dt>
+<dd><p>The following attributes and methods must be overriden by subclasses of
+<a class="reference internal" href="#DocumentWorkflow" title="DocumentWorkflow"><tt class="xref py py-class docutils literal"><span class="pre">DocumentWorkflow</span></tt></a>.</p>
+<dl class="attribute">
+<dt id="DocumentWorkflow.state_attr">
+<tt class="descname">state_attr</tt><a class="headerlink" href="#DocumentWorkflow.state_attr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refers to the attribute on the document that contains the state value.
+Default <tt class="xref docutils literal"><span class="pre">None</span></tt>.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DocumentWorkflow.state_key">
+<tt class="descname">state_key</tt><a class="headerlink" href="#DocumentWorkflow.state_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>If <a class="reference internal" href="#DocumentWorkflow.state_attr" title="DocumentWorkflow.state_attr"><tt class="xref py py-attr docutils literal"><span class="pre">state_attr</span></tt></a> is <tt class="xref docutils literal"><span class="pre">None</span></tt>, <a class="reference internal" href="#DocumentWorkflow.state_key" title="DocumentWorkflow.state_key"><tt class="xref py py-attr docutils literal"><span class="pre">state_key</span></tt></a> refers to the
+dictionary key in the document containing the state value. Default
+<tt class="xref docutils literal"><span class="pre">None</span></tt>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="DocumentWorkflow.state_get">
+<tt class="descname">state_get</tt><big>(</big><em>document</em><big>)</big><a class="headerlink" href="#DocumentWorkflow.state_get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="DocumentWorkflow.state_set">
+<tt class="descname">state_set</tt><big>(</big><em>document</em>, <em>value</em><big>)</big><a class="headerlink" href="#DocumentWorkflow.state_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>If both <a class="reference internal" href="#DocumentWorkflow.state_attr" title="DocumentWorkflow.state_attr"><tt class="xref py py-attr docutils literal"><span class="pre">state_attr</span></tt></a> and <a class="reference internal" href="#DocumentWorkflow.state_key" title="DocumentWorkflow.state_key"><tt class="xref py py-attr docutils literal"><span class="pre">state_key</span></tt></a> are <tt class="xref docutils literal"><span class="pre">None</span></tt>, the
+<a class="reference internal" href="#DocumentWorkflow.state_get" title="DocumentWorkflow.state_get"><tt class="xref py py-meth docutils literal"><span class="pre">state_get()</span></tt></a> and <a class="reference internal" href="#DocumentWorkflow.state_set" title="DocumentWorkflow.state_set"><tt class="xref py py-meth docutils literal"><span class="pre">state_set()</span></tt></a> methods are called with
+the document as a parameter.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="DocumentWorkflow.state">
+<tt class="descname">state</tt><a class="headerlink" href="#DocumentWorkflow.state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Currently active workflow state.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="DocumentWorkflow.permissions">
+<tt class="descname">permissions</tt><big>(</big><span class="optional">[</span><em>context</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#DocumentWorkflow.permissions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Permissions available to caller in the given context, returned
+as a list of tokens.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="DocumentWorkflow.all_states">
+<tt class="descname">all_states</tt><big>(</big><big>)</big><a class="headerlink" href="#DocumentWorkflow.all_states" title="Permalink to this definition">¶</a></dt>
+<dd><p>Standard method: returns a dictionary of all states in this workflow.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="DocumentWorkflow.transitions">
+<tt class="descname">transitions</tt><big>(</big><span class="optional">[</span><em>context</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#DocumentWorkflow.transitions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Standard method: returns a dictionary of available transitions out of
+the current state.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="WorkflowState">
+<em class="property">class </em><tt class="descname">WorkflowState</tt><big>(</big><em>value</em><span class="optional">[</span>, <em>title</em>, <em>description</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#WorkflowState" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a workflow state as an attribute on a <a class="reference internal" href="#DocumentWorkflow" title="DocumentWorkflow"><tt class="xref py py-class docutils literal"><span class="pre">DocumentWorkflow</span></tt></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>value</strong> &#8211; Value representing this workflow state. Can be any
+hashable Python object. Usually an integer or string</li>
+<li><strong>title</strong> &#8211; Optional title for this workflow state</li>
+<li><strong>description</strong> &#8211; Optional description for this workflow state</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="WorkflowState.transition">
+<tt class="descname">transition</tt><big>(</big><em>tostate</em>, <em>permission</em><span class="optional">[</span>, <em>title</em>, <em>description</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#WorkflowState.transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator for a method on <a class="reference internal" href="#DocumentWorkflow" title="DocumentWorkflow"><tt class="xref py py-class docutils literal"><span class="pre">DocumentWorkflow</span></tt></a> that handles the
+transition from this state to another. The decorator will test for
+correct state and permission, and will transition the document&#8217;s state
+if the method returns without raising an exception.</p>
+<p>The method must take <tt class="xref py py-attr docutils literal"><span class="pre">context</span></tt> as its first parameter. The
+context is passed to <a class="reference internal" href="#DocumentWorkflow.permissions" title="DocumentWorkflow.permissions"><tt class="xref py py-meth docutils literal"><span class="pre">permissions()</span></tt></a> to check
+for permission.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>tostate</strong> &#8211; Destination <a class="reference internal" href="#WorkflowState" title="WorkflowState"><tt class="xref py py-class docutils literal"><span class="pre">WorkflowState</span></tt></a></li>
+<li><strong>permission</strong> &#8211; Token representing permission required to call the
+transition. Must be present in the list returned by
+<a class="reference internal" href="#DocumentWorkflow.permissions" title="DocumentWorkflow.permissions"><tt class="xref py py-meth docutils literal"><span class="pre">permissions()</span></tt></a></li>
+<li><strong>title</strong> &#8211; Optional title for this transition</li>
+<li><strong>description</strong> &#8211; Optional description for this transition</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><strong>WorkflowTransitionException</strong> &#8211; If this transition is called
+when in some other state</li>
+<li><strong>WorkflowPermissionException</strong> &#8211; If <tt class="xref py py-attr docutils literal"><span class="pre">permission</span></tt> is not in
+<a class="reference internal" href="#DocumentWorkflow.permissions" title="DocumentWorkflow.permissions"><tt class="xref py py-meth docutils literal"><span class="pre">permissions()</span></tt></a></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="WorkflowStateGroup">
+<em class="property">class </em><tt class="descname">WorkflowStateGroup</tt><big>(</big><em>values</em><span class="optional">[</span>, <em>title</em>, <em>description</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#WorkflowStateGroup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like <a class="reference internal" href="#WorkflowState" title="WorkflowState"><tt class="xref py py-class docutils literal"><span class="pre">WorkflowState</span></tt></a> but lists more than one value. Useful to
+test for the current state being one of many. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">MyWorkflow</span><span class="p">(</span><span class="n">DocumentWorkflow</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">draft</span> <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Draft&quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">pending</span> <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">1</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Pending&quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">published</span> <span class="o">=</span> <span class="n">WorkflowState</span><span class="p">(</span><span class="mf">2</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Published&quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">not_published</span> <span class="o">=</span> <span class="n">WorkflowStateGroup</span><span class="p">([</span><span class="mf">0</span><span class="p">,</span> <span class="mf">1</span><span class="p">],</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;Not Published&quot;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span> <span class="o">=</span> <span class="n">MyWorkflow</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">draft</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">pending</span><span class="p">()</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">published</span><span class="p">()</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wf</span><span class="o">.</span><span class="n">not_published</span><span class="p">()</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="#WorkflowStateGroup" title="WorkflowStateGroup"><tt class="xref py py-class docutils literal"><span class="pre">WorkflowStateGroup</span></tt></a> instances cannot have transitions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>values</strong> (<tt class="docutils literal"><span class="pre">list</span></tt>) &#8211; Valid values as specified in <a class="reference internal" href="#WorkflowState" title="WorkflowState"><tt class="xref py py-class docutils literal"><span class="pre">WorkflowState</span></tt></a></li>
+<li><strong>title</strong> &#8211; Optional title for this workflow state</li>
+<li><strong>description</strong> &#8211; Optional description for this workflow state</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h2><a class="toc-backref" href="#id6">Indices and tables</a><a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to Docflow&#8217;s documentation!</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+<li><a class="reference internal" href="#api-documentation">API Documentation</a><ul>
+<li><a class="reference internal" href="#package-docflow">Package <tt class="docutils literal"><span class="pre">docflow</span></tt></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="#">Docflow v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Kiran Jonnalagadda.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

@@ -35,10 +35,11 @@ class MyDocumentWorkflow(DocumentWorkflow):
         """
         Return permissions available to current user. A permission can be any hashable token.
         """
+        base_permissions = super(MyDocumentWorkflow, self).permissions(context)
         if context and context['is_admin']:
-            return ['can_publish']
+            return base_permissions + ['can_publish']
         else:
-            return []
+            return base_permissions + []
 
     # Define a transition. There can be multiple transitions connecting any two states.
     # Parameters: newstate, permission, title, description
@@ -66,10 +67,44 @@ class MyDocumentWorkflowExtraState(MyDocumentWorkflow):
     expired = WorkflowState(5, title="Expired")
 
 
+class MyDocumentWorkflowDict(MyDocumentWorkflow):
+    state_attr = None
+    state_key = 'status'
+
+
+class MyDocumentWorkflowCustom(MyDocumentWorkflow):
+    state_attr = None
+
+    def state_get(self, document):
+        """
+        Demo state_get method.
+        """
+        if isinstance(document, dict):
+            return document['status']
+        else:
+            return document.status
+
+    def state_set(self, document, value):
+        if isinstance(document, dict):
+            document['status'] = value
+        else:
+            document.status = value
+
+
 class TestWorkflow(unittest.TestCase):
     def test_no_default_state(self):
         doc = MyDocument()
         self.assertRaises(WorkflowStateException, MyDocumentWorkflow, doc)
+
+    def test_empty_document(self):
+        class Doc:
+            pass
+        doc = Doc()
+        self.assertRaises(WorkflowStateException, MyDocumentWorkflow, doc)
+
+    def test_state_key_unknown_state(self):
+        doc = {}
+        self.assertRaises(WorkflowStateException, MyDocumentWorkflowDict, doc)
 
     def test_states(self):
         doc = MyDocument()
@@ -83,6 +118,13 @@ class TestWorkflow(unittest.TestCase):
         wf = MyDocumentWorkflow(doc)
         wf.submit()
         self.assertEqual(wf.state, wf.pending)
+
+    def test_transition_list(self):
+        doc = MyDocument()
+        doc.status = 0
+        wf = MyDocumentWorkflow(doc)
+        self.assertEqual(len(wf.transitions()), 1)
+        self.assertEqual(wf.transitions()['submit']['title'], 'Submit')
 
     def test_invalid_transitions(self):
         doc = MyDocument()
@@ -120,6 +162,40 @@ class TestWorkflow(unittest.TestCase):
         doc.status = 0
         wf = MyDocumentWorkflow(doc)
         self.assertEqual(wf.not_published(), True)
+
+    def test_repr(self):
+        doc = MyDocument()
+        doc.status = 0
+        wf = MyDocumentWorkflow(doc)
+        self.assertEqual(repr(wf.draft), "<WorkflowState 'Draft'>")
+        self.assertEqual(repr(wf.not_published), "<WorkflowStateGroup 'Not Published'>")
+        self.assertEqual(repr(wf), "<Workflow MyDocumentWorkflow>")
+
+    def test_unattached_workflowstate(self):
+        self.assertRaises(WorkflowStateException, MyDocumentWorkflow.draft)
+        self.assertRaises(WorkflowStateException, MyDocumentWorkflow.not_published)
+
+    def test_state_key(self):
+        doc = {}
+        doc['status'] = 0
+        wf = MyDocumentWorkflowDict(doc)
+        wf.submit()
+        self.assertEqual(doc['status'], 1)
+
+    def test_state_custom(self):
+        doc1 = MyDocument()
+        doc1.status = 0
+        wf1 = MyDocumentWorkflowCustom(doc1)
+        wf1.submit()
+        self.assertEqual(wf1.state, wf1.pending)
+        self.assertEqual(doc1.status, wf1.pending.value)
+
+        doc2 = {}
+        doc2['status'] = 0
+        wf2 = MyDocumentWorkflowCustom(doc2)
+        wf2.submit()
+        self.assertEqual(wf2.state, wf2.pending)
+        self.assertEqual(doc2['status'], wf2.pending.value)
 
 if __name__=='__main__':
     unittest.main()

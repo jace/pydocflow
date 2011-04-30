@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+__version__ = '0.1'
+
 from functools import wraps
+import weakref
 
 class WorkflowException(Exception):
     pass
@@ -22,20 +25,27 @@ class WorkflowState(object):
         self.title = title
         self.description = description
         self._parent = None
+        self._transitions = {}
 
     def attach(self, workflow):
+        """
+        Attach this workflow state to a workflow instance.
+        """
+        # XXX: This isn't particularly efficient. There has to be a way to
+        # wrap the existing object instead of copying it.
         newstate = self.__class__(self.value, self.title, self.description)
         newstate.name = self.name
-        newstate._parent = workflow
+        newstate._parent = weakref.ref(workflow)
+        newstate._transitions = self._transitions
         return newstate
 
     def __repr__(self):
         return "<WorkflowState %s>" % repr(self.title)
 
     def __call__(self):
-        if not self._parent:
+        if self._parent is None or self._parent() is None:
             raise WorkflowStateException("Unattached state")
-        return self._parent._getStateValue() == self.value
+        return self._parent()._getStateValue() == self.value
 
     def __eq__(self, other):
         return (self.value == other.value and
@@ -51,7 +61,15 @@ class WorkflowState(object):
         Decorator for transition functions.
         """
         def inner(f):
-            # TODO: Save to list of transitions here
+            # XXX: Doesn't this cause circular references?
+            # We have states referring to each other.
+            self._transitions[f.__name__] = dict(
+                name = f.__name__,
+                title = title,
+                description = description,
+                permission = permission,
+                state_from = self,
+                state_to = tostate)
             @wraps(f)
             def decorated_function(workflow, context=None, *args, **kwargs):
                 # Perform tests: is state correct? Is permission available?
@@ -67,12 +85,12 @@ class WorkflowState(object):
 
 class WorkflowStateGroup(WorkflowState):
     def __repr__(self):
-        return '<WorklowStateGroup %s>' % repr(self.title)
+        return '<WorkflowStateGroup %s>' % repr(self.title)
 
     def __call__(self):
-        if not self._parent:
+        if self._parent is None or self._parent() is None:
             raise WorkflowStateException("Unattached state")
-        return self._parent._getStateValue() in self.value
+        return self._parent()._getStateValue() in self.value
 
 
 class _InitDocumentWorkflow(type):
@@ -140,9 +158,15 @@ class DocumentWorkflow(object):
     def _getStateValue(self):
         # Get the state value from document
         if self.state_attr:
-            return getattr(self._document, self.state_attr)
+            try:
+                return getattr(self._document, self.state_attr)
+            except AttributeError:
+                raise WorkflowStateException("Unknown state")
         elif self.state_key:
-            return self.document[self.state_key]
+            try:
+                return self._document[self.state_key]
+            except:
+                raise WorkflowStateException("Unknown state")
         elif self.state_get:
             return self.state_get(self._document)
         else:
@@ -163,12 +187,6 @@ class DocumentWorkflow(object):
     def state(self):
         return self._state_values[self._getStateValue()]
 
-    #@state.setter
-    #def state(self, value):
-    #    if not isinstance(value, WorkflowState):
-    #        raise WorkflowStateException("Not a state")
-    #    self._setStateValue(value.value)
-
     def all_states(self):
         """
         All states
@@ -182,4 +200,5 @@ class DocumentWorkflow(object):
         return []
 
     def transitions(self, context=None):
-        pass
+        # TODO: Return this in a useful manner
+        return self.state._transitions

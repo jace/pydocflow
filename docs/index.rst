@@ -142,6 +142,29 @@ has been defined, usage is straightforward::
   >>> wf.pending()
   True
 
+As a convenience mechanism, workflows can be linked to document classes,
+making it easier to retrieve the workflow for a given document::
+
+  class MyDocument(object):
+      def __init__(self):
+	      self.status = 0
+
+  class MyDocumentWorkflow(DocumentWorkflow):
+      state_attr = 'status'
+
+  MyDocumentWorkflow.apply_on(MyDocument)
+
+After this, the workflow for a document becomes available with the
+:attr:`workflow` method::
+
+  doc = MyDocument()
+  wf = doc.workflow()
+
+The :meth:`~docflow.DocumentWorkflow.apply_on` method raises
+:class:`~docflow.WorkflowException` if the target class
+already has an attribute named :attr:`workflow`.
+
+
 API Documentation
 -----------------
 
@@ -188,6 +211,12 @@ Package :mod:`docflow`
 
         Standard method: returns a dictionary of available transitions out of
         the current state.
+
+    .. method:: apply_on(docclass)
+
+		Class method. Applies this workflow to the specified document class.
+		The workflow can then be retrieved by calling the :attr:`workflow` method
+		on the document.
 
 .. class:: WorkflowState(value, [title, description])
 

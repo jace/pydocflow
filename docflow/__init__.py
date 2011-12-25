@@ -4,7 +4,7 @@
 Docflow: Python Document Workflows
 """
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 from functools import wraps
 import weakref
@@ -215,3 +215,15 @@ class DocumentWorkflow(object):
     def transitions(self, context=None):
         # TODO: Return this in a useful manner
         return self.state._transitions
+
+    @classmethod
+    def apply_on(cls, docclass):
+        """Apply workflow on specified document class."""
+        def workflow(self):
+            """Return a workflow wrapper for this document."""
+            # Workflows can be re-instantiated anytime because they don't store
+            # any data on the workflow object. All storage is in the document.
+            return cls(self)
+        if hasattr(docclass, 'workflow'):
+            raise WorkflowException("This document class already has workflow.")
+        docclass.workflow = workflow

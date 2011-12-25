@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from docflow import (DocumentWorkflow, WorkflowState, WorkflowStateGroup,
+from docflow import (DocumentWorkflow, WorkflowState, WorkflowStateGroup, WorkflowException,
     WorkflowStateException, WorkflowTransitionException, WorkflowPermissionException)
 
 class MyDocument(object):
@@ -196,6 +196,13 @@ class TestWorkflow(unittest.TestCase):
         wf2.submit()
         self.assertEqual(wf2.state, wf2.pending)
         self.assertEqual(doc2['status'], wf2.pending.value)
+
+    def test_get_workflow(self):
+        MyDocumentWorkflow.apply_on(MyDocument)
+        doc = MyDocument()
+        doc.status = 0
+        self.assertTrue(isinstance(doc.workflow(), MyDocumentWorkflow))
+        self.assertRaises(WorkflowException, MyDocumentWorkflow.apply_on, MyDocument)
 
 if __name__=='__main__':
     unittest.main()

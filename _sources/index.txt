@@ -147,7 +147,7 @@ making it easier to retrieve the workflow for a given document::
 
   class MyDocument(object):
       def __init__(self):
-	      self.status = 0
+          self.status = 0
 
   class MyDocumentWorkflow(DocumentWorkflow):
       state_attr = 'status'
@@ -214,9 +214,9 @@ Package :mod:`docflow`
 
     .. method:: apply_on(docclass)
 
-		Class method. Applies this workflow to the specified document class.
-		The workflow can then be retrieved by calling the :attr:`workflow` method
-		on the document.
+        Class method. Applies this workflow to the specified document class.
+        The workflow can then be retrieved by calling the :attr:`workflow` method
+        on the document.
 
 .. class:: WorkflowState(value, [title, description])
 

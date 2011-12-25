@@ -215,7 +215,7 @@ Package :mod:`docflow`
     .. method:: apply_on(docclass)
 
 		Class method. Applies this workflow to the specified document class.
-		The workflow can then be retrieved by calling the ``workflow()`` method
+		The workflow can then be retrieved by calling the :attr:`workflow` method
 		on the document.
 
 .. class:: WorkflowState(value, [title, description])

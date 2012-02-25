@@ -149,7 +149,17 @@ class TestWorkflow(unittest.TestCase):
         doc = MyDocument()
         doc.status = 0
         wf = MyDocumentWorkflowExtraState(doc)
-        self.assertEqual(len(wf.all_states()), 6)
+        self.assertEqual(len(wf.states()), 6)
+
+    def test_class_statelist(self):
+        self.assertEqual(len(MyDocumentWorkflow.states()), 5)
+        self.assertEqual(len(MyDocumentWorkflowExtraState.states()), 6)
+
+    def test_state_seq(self):
+        self.assertEqual([s.name for s in MyDocumentWorkflow.states()],
+            ['draft', 'pending', 'published', 'withdrawn', 'rejected'])
+        self.assertEqual([s.name for s in MyDocumentWorkflowExtraState.states()],
+            ['draft', 'pending', 'published', 'withdrawn', 'rejected', 'expired'])
 
     def test_state_boolean(self):
         doc = MyDocument()

@@ -22,6 +22,25 @@ class WorkflowPermissionException(WorkflowException):
     pass
 
 
+_creation_order = 1
+def _set_creation_order(instance):
+    """
+    Assign a '_creation_order' sequence to the given instance.
+
+    This allows multiple instances to be sorted in order of creation
+    (typically within a single thread; the counter is not particularly
+    threadsafe).
+
+    This code is from SQLAlchemy, available here:
+    http://www.sqlalchemy.org/trac/browser/lib/sqlalchemy/util/langhelpers.py#L836
+
+    Only recommended for use at app load time.
+    """
+    global _creation_order
+    instance._creation_order = _creation_order
+    _creation_order +=1
+
+
 class WorkflowState(object):
     """
     State in a workflow.
@@ -33,6 +52,7 @@ class WorkflowState(object):
         self.description = description
         self._parent = None
         self._transitions = {}
+        _set_creation_order(self)
 
     def attach(self, workflow):
         """
@@ -127,6 +147,7 @@ class _InitDocumentWorkflow(type):
                     # A group doesn't have a single value, so don't add groups
                     attrs['_state_values'][stateob.value] = stateob
 
+        attrs['_states_sorted'] = sorted(attrs['_states'].values(), key=lambda s:s._creation_order)
         return super(_InitDocumentWorkflow, cls).__new__(cls, name, bases, attrs)
 
 
@@ -200,11 +221,12 @@ class DocumentWorkflow(object):
     def state(self):
         return self._state_values[self._getStateValue()]
 
-    def all_states(self):
+    @classmethod
+    def states(cls):
         """
-        All states
+        All states, sorted.
         """
-        return dict(self._states) # Make a shallow copy
+        return list(cls._states_sorted) # Make a shallow copy
 
     def permissions(self, context=None):
         """

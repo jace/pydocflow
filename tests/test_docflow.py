@@ -75,6 +75,7 @@ class MyDocumentWorkflowDict(MyDocumentWorkflow):
 class MyDocumentWorkflowCustom(MyDocumentWorkflow):
     state_attr = None
 
+    @classmethod
     def state_get(self, document):
         """
         Demo state_get method.
@@ -84,7 +85,8 @@ class MyDocumentWorkflowCustom(MyDocumentWorkflow):
         else:
             return document.status
 
-    def state_set(self, document, value):
+    @classmethod
+    def state_set(cls, document, value):
         if isinstance(document, dict):
             document['status'] = value
         else:
@@ -213,6 +215,8 @@ class TestWorkflow(unittest.TestCase):
         doc.status = 0
         self.assertTrue(isinstance(doc.workflow(), MyDocumentWorkflow))
         self.assertRaises(WorkflowException, MyDocumentWorkflow.apply_on, MyDocument)
+        self.assertTrue(doc.workflow().draft())
+
 
 if __name__=='__main__':
     unittest.main()

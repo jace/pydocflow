@@ -189,22 +189,26 @@ class DocumentWorkflow(object):
     def __repr__(self):
         return '<Workflow %s>' % self._name
 
-    def _getStateValue(self):
+    @classmethod
+    def _getStateValueInner(cls, document):
         # Get the state value from document
-        if self.state_attr:
+        if cls.state_attr:
             try:
-                return getattr(self._document, self.state_attr)
+                return getattr(document, cls.state_attr)
             except AttributeError:
                 raise WorkflowStateException("Unknown state")
-        elif self.state_key:
+        elif cls.state_key:
             try:
-                return self._document[self.state_key]
+                return document[cls.state_key]
             except:
                 raise WorkflowStateException("Unknown state")
-        elif self.state_get:
-            return self.state_get(self._document)
+        elif cls.state_get:
+            return cls.state_get(document)
         else:
             raise WorkflowStateException("State cannot be read")
+
+    def _getStateValue(self):
+        return self._getStateValueInner(self._document)
 
     def _setStateValue(self, value):
         # Set state value on document
@@ -230,7 +234,8 @@ class DocumentWorkflow(object):
 
     def permissions(self, context=None):
         """
-        Permissions available in given context.
+        Permissions available in given context. This method must be
+        overridden by subclasses.
         """
         return []
 
@@ -249,3 +254,17 @@ class DocumentWorkflow(object):
         if hasattr(docclass, 'workflow'):
             raise WorkflowException("This document class already has workflow.")
         docclass.workflow = workflow
+
+    @classmethod
+    def sort_documents(cls, documents):
+        """
+        Sort the given collection of documents by workflow state.
+        Returns a dictionary of lists.
+        """
+        result = {}
+        for state in cls.states():
+            result[state.name] = []
+        for doc in documents:
+            state = cls._state_values[cls._getStateValueInner(doc)]
+            result[state.name].append(doc)
+        return result

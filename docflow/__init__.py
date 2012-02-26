@@ -75,10 +75,7 @@ class WorkflowState(object):
         return self._parent()._getStateValue() == self.value
 
     def __eq__(self, other):
-        return (self.value == other.value and
-                self.name == other.name and
-                self.title == other.title and
-                self.description == other.description)
+        return self.value == other.value
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -240,8 +237,12 @@ class DocumentWorkflow(object):
         return []
 
     def transitions(self, context=None):
-        # TODO: Return this in a useful manner
-        return self.state._transitions
+        permissions = self.permissions(context)
+        result = {}
+        for k, v in self.state._transitions.iteritems():
+            if v['permission'] is None or v['permission'] in permissions:
+                result[k] = v
+        return result
 
     @classmethod
     def apply_on(cls, docclass):

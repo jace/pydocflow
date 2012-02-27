@@ -30,6 +30,7 @@ class MyDocumentWorkflow(DocumentWorkflow):
 
     # Define a state group
     not_published = WorkflowStateGroup([0, 1], title="Not Published")
+    removed = WorkflowStateGroup([withdrawn, rejected], title="Removed")
 
     def permissions(self, context=None):
         """
@@ -174,6 +175,12 @@ class TestWorkflow(unittest.TestCase):
         doc.status = 0
         wf = MyDocumentWorkflow(doc)
         self.assertEqual(wf.not_published(), True)
+
+    def test_state_group_with_named_states(self):
+        doc = MyDocument()
+        doc.status = 3
+        wf = MyDocumentWorkflow(doc)
+        self.assertEqual(wf.removed(), True)
 
     def test_repr(self):
         doc = MyDocument()

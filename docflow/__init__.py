@@ -107,10 +107,19 @@ class WorkflowState(object):
             return decorated_function
         return inner
 
+
 class WorkflowStateGroup(WorkflowState):
     """
-    Group of states in a workflow.
+    Group of states in a workflow. The value parameter is a list of value
+    tokens or WorklowState instances.
     """
+    def __init__(self, value, title=u'', description=u''):
+        value = list(value) # Make a copy before editing
+        for counter, item in enumerate(value):
+            if isinstance(item, WorkflowState):
+                value[counter] = item.value
+        super(WorkflowStateGroup, self).__init__(value, title, description)
+
     def __repr__(self):
         return '<WorkflowStateGroup %s>' % repr(self.title)
 
@@ -153,6 +162,8 @@ class DocumentWorkflow(object):
     Base class for document workflows.
     """
     __metaclass__ = _InitDocumentWorkflow
+
+    #: One of these attributes must be overridden by subclasses
 
     #: State is contained in an attribute on the document
     state_attr = None
@@ -237,6 +248,9 @@ class DocumentWorkflow(object):
         return []
 
     def transitions(self, context=None):
+        """
+        Transitions available in the current state and given context.
+        """
         permissions = self.permissions(context)
         result = {}
         for k, v in self.state._transitions.iteritems():

@@ -114,24 +114,12 @@ class WorkflowState(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def transition(self, tostate, permission,
+    def transition(self, state_to, permission,
                    title='', description='', category=''):
         """
         Decorator for transition functions.
         """
         def inner(f):
-            # XXX: Doesn't this cause circular references?
-            # We have states referring to each other.
-            t = WorkflowTransition(f,
-                name=f.__name__,
-                title=title,
-                description=description,
-                category=category,
-                permission=permission,
-                state_from=self,
-                state_to=tostate)
-            self._transitions[f.__name__] = t
-
             @wraps(f)
             def decorated_function(workflow, context=None, *args, **kwargs):
                 # Perform tests: is state correct? Is permission available?
@@ -142,9 +130,21 @@ class WorkflowState(object):
                     raise WorkflowPermissionException(
                         "Permission not available")
                 result = f(workflow, context, *args, **kwargs)
-                workflow._setStateValue(tostate.value)
+                workflow._setStateValue(state_to.value)
                 return result
-            t.f = decorated_function
+
+            # XXX: Doesn't this cause circular references?
+            # We have states referring to each other.
+            t = WorkflowTransition(decorated_function,
+                name=f.__name__,
+                title=title,
+                description=description,
+                category=category,
+                permission=permission,
+                state_from=self,
+                state_to=state_to)
+            # TODO: Allow transitions to be attached to more than one state_from
+            self._transitions[f.__name__] = t
             return decorated_function
         return inner
 

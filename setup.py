@@ -7,6 +7,7 @@ README = unicode(open(os.path.join(here, 'README.rst')).read(), 'utf-8')
 CHANGES = unicode(open(os.path.join(here, 'CHANGES.rst')).read(), 'utf-8')
 
 requires = [
+    'ordereddict',
     ]
 
 setup(name='docflow',

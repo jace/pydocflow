@@ -4,25 +4,35 @@
 Docflow: Python Document Workflows
 """
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 from functools import wraps
 import weakref
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
+
 
 class WorkflowException(Exception):
     pass
 
+
 class WorkflowStateException(WorkflowException):
     pass
 
+
 class WorkflowTransitionException(WorkflowException):
     pass
+
 
 class WorkflowPermissionException(WorkflowException):
     pass
 
 
 _creation_order = 1
+
+
 def _set_creation_order(instance):
     """
     Assign a '_creation_order' sequence to the given instance.
@@ -38,7 +48,31 @@ def _set_creation_order(instance):
     """
     global _creation_order
     instance._creation_order = _creation_order
-    _creation_order +=1
+    _creation_order += 1
+
+
+class WorkflowTransition(object):
+    """
+    Transition between states.
+    """
+    def __init__(self, f, name,
+                title='',
+                description='',
+                category='',
+                permission='',
+                state_from=None,
+                state_to=None):
+        self.f = f
+        self.name = name
+        self.title = title
+        self.description = description
+        self.category = category
+        self.permission = permission
+        self.state_from = state_from
+        self.state_to = state_to
+
+    def __call__(self, *args, **kw):
+        return self.f(*args, **kw)
 
 
 class WorkflowState(object):
@@ -47,11 +81,11 @@ class WorkflowState(object):
     """
     def __init__(self, value, title=u'', description=u''):
         self.value = value
-        self.name = None # Not named yet
+        self.name = None  # Not named yet
         self.title = title
         self.description = description
         self._parent = None
-        self._transitions = {}
+        self._transitions = OrderedDict()
         _set_creation_order(self)
 
     def attach(self, workflow):
@@ -80,30 +114,37 @@ class WorkflowState(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def transition(self, tostate, permission, title='', description=''):
+    def transition(self, tostate, permission,
+                   title='', description='', category=''):
         """
         Decorator for transition functions.
         """
         def inner(f):
             # XXX: Doesn't this cause circular references?
             # We have states referring to each other.
-            self._transitions[f.__name__] = dict(
-                name = f.__name__,
-                title = title,
-                description = description,
-                permission = permission,
-                state_from = self,
-                state_to = tostate)
+            t = WorkflowTransition(f,
+                name=f.__name__,
+                title=title,
+                description=description,
+                category=category,
+                permission=permission,
+                state_from=self,
+                state_to=tostate)
+            self._transitions[f.__name__] = t
+
             @wraps(f)
             def decorated_function(workflow, context=None, *args, **kwargs):
                 # Perform tests: is state correct? Is permission available?
                 if workflow.state != self:
                     raise WorkflowTransitionException("Incorrect state")
-                if permission and permission not in workflow.permissions(context):
-                    raise WorkflowPermissionException("Permission not available")
+                if permission and (permission not in
+                                   workflow.permissions(context)):
+                    raise WorkflowPermissionException(
+                        "Permission not available")
                 result = f(workflow, context, *args, **kwargs)
                 workflow._setStateValue(tostate.value)
                 return result
+            t.f = decorated_function
             return decorated_function
         return inner
 
@@ -114,7 +155,7 @@ class WorkflowStateGroup(WorkflowState):
     tokens or WorklowState instances.
     """
     def __init__(self, value, title=u'', description=u''):
-        value = list(value) # Make a copy before editing
+        value = list(value)  # Make a copy before editing
         for counter, item in enumerate(value):
             if isinstance(item, WorkflowState):
                 value[counter] = item.value
@@ -133,12 +174,14 @@ class _InitDocumentWorkflow(type):
     def __new__(cls, name, bases, attrs):
         attrs['_is_document_workflow'] = True
         attrs['_name'] = name
-        attrs['_states'] = {} # state_name: object
-        attrs['_state_groups'] = {} # state_group: object
-        attrs['_state_values'] = {} # Reverse lookup: value to object
-        # If any base class contains _states, _state_groups or _state_values, extend them
+        attrs['_states'] = {}  # state_name: object
+        attrs['_state_groups'] = {}  # state_group: object
+        attrs['_state_values'] = {}  # Reverse lookup: value to object
+        # If any base class contains _states, _state_groups or _state_values,
+        # extend them
         for base in bases:
-            if hasattr(base, '_is_document_workflow') and base._is_document_workflow:
+            if hasattr(base,
+                       '_is_document_workflow') and base._is_document_workflow:
                 attrs['_states'].update(base._states)
                 attrs['_state_groups'].update(base._state_groups)
                 attrs['_state_values'].update(base._state_values)
@@ -153,8 +196,10 @@ class _InitDocumentWorkflow(type):
                     # A group doesn't have a single value, so don't add groups
                     attrs['_state_values'][stateob.value] = stateob
 
-        attrs['_states_sorted'] = sorted(attrs['_states'].values(), key=lambda s:s._creation_order)
-        return super(_InitDocumentWorkflow, cls).__new__(cls, name, bases, attrs)
+        attrs['_states_sorted'] = sorted(attrs['_states'].values(),
+            key=lambda s: s._creation_order)
+        return super(_InitDocumentWorkflow, cls).__new__(
+            cls, name, bases, attrs)
 
 
 class DocumentWorkflow(object):
@@ -177,7 +222,7 @@ class DocumentWorkflow(object):
 
     def __init__(self, document):
         self._document = document
-        self._state = None # No default state yet
+        self._state = None  # No default state yet
         state = self._getStateValue()
         if state not in self._state_values:
             raise WorkflowStateException("Unknown state")
@@ -238,7 +283,7 @@ class DocumentWorkflow(object):
         """
         All states, sorted.
         """
-        return list(cls._states_sorted) # Make a shallow copy
+        return list(cls._states_sorted)  # Make a shallow copy
 
     def permissions(self, context=None):
         """
@@ -252,9 +297,9 @@ class DocumentWorkflow(object):
         Transitions available in the current state and given context.
         """
         permissions = self.permissions(context)
-        result = {}
+        result = OrderedDict()
         for k, v in self.state._transitions.iteritems():
-            if v['permission'] is None or v['permission'] in permissions:
+            if v.permission is None or v.permission in permissions:
                 result[k] = v
         return result
 
@@ -267,7 +312,8 @@ class DocumentWorkflow(object):
             # any data on the workflow object. All storage is in the document.
             return cls(self)
         if hasattr(docclass, 'workflow'):
-            raise WorkflowException("This document class already has workflow.")
+            raise WorkflowException(
+                "This document class already has workflow.")
         docclass.workflow = workflow
 
     @classmethod

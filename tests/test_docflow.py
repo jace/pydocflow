@@ -127,7 +127,7 @@ class TestWorkflow(unittest.TestCase):
         doc.status = 0
         wf = MyDocumentWorkflow(doc)
         self.assertEqual(len(wf.transitions()), 1)
-        self.assertEqual(wf.transitions()['submit']['title'], 'Submit')
+        self.assertEqual(wf.transitions()['submit'].title, 'Submit')
 
     def test_invalid_transitions(self):
         doc = MyDocument()

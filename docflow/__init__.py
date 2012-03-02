@@ -13,20 +13,29 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
+# XXX: Make this more elegant. How do you make docflow's exceptions compatible
+# with exceptions raised by frameworks, without importing framework-specific
+# exceptions?
+try:
+    from werkzeug.exceptions import Forbidden
+except ImportError:
+    class Forbidden(Exception):
+        pass
+
 
 class WorkflowException(Exception):
     pass
 
 
-class WorkflowStateException(WorkflowException):
+class WorkflowStateException(WorkflowException, Forbidden):
     pass
 
 
-class WorkflowTransitionException(WorkflowException):
+class WorkflowTransitionException(WorkflowException, Forbidden):
     pass
 
 
-class WorkflowPermissionException(WorkflowException):
+class WorkflowPermissionException(WorkflowException, Forbidden):
     pass
 
 

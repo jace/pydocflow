@@ -4,11 +4,13 @@ import unittest
 from docflow import (DocumentWorkflow, WorkflowState, WorkflowStateGroup, WorkflowException,
     WorkflowStateException, WorkflowTransitionException, WorkflowPermissionException)
 
+
 class MyDocument(object):
     def __init__(self):
         self.status = None
         self.email = ''
         self.email_verified = False
+
 
 class MyDocumentWorkflow(DocumentWorkflow):
     """
@@ -22,22 +24,22 @@ class MyDocumentWorkflow(DocumentWorkflow):
 
     # Define a state. First parameter is the state tracking value,
     # stored in state_attr
-    draft     = WorkflowState(0, title="Draft",     description="Only owner can see it")
-    pending   = WorkflowState(1, title="Pending",   description="Pending review")
+    draft = WorkflowState(0, title="Draft",     description="Only owner can see it")
+    pending = WorkflowState(1, title="Pending",   description="Pending review")
     published = WorkflowState(2, title="Published", description="Published")
     withdrawn = WorkflowState(3, title="Withdrawn", description="Withdrawn by owner")
-    rejected  = WorkflowState(4, title="Rejected",  description="Rejected by reviewer")
+    rejected = WorkflowState(4, title="Rejected",  description="Rejected by reviewer")
 
     # Define a state group
     not_published = WorkflowStateGroup([0, 1], title="Not Published")
     removed = WorkflowStateGroup([withdrawn, rejected], title="Removed")
 
-    def permissions(self, context=None):
+    def permissions(self):
         """
         Return permissions available to current user. A permission can be any hashable token.
         """
-        base_permissions = super(MyDocumentWorkflow, self).permissions(context)
-        if context and context['is_admin']:
+        base_permissions = super(MyDocumentWorkflow, self).permissions()
+        if self.context and self.context['is_admin']:
             return base_permissions + ['can_publish']
         else:
             return base_permissions + []
@@ -45,22 +47,22 @@ class MyDocumentWorkflow(DocumentWorkflow):
     # Define a transition. There can be multiple transitions connecting any two states.
     # Parameters: newstate, permission, title, description
     @draft.transition(pending, None, title='Submit')
-    def submit(self, context=None):
+    def submit(self):
         """
         Change workflow state from draft to pending.
         """
         # Do something here
         # ...
-        pass # State will be changed automatically if we don't raise an exception
+        pass  # State will be changed automatically if we don't raise an exception
 
     @pending.transition(published, 'can_publish', title="Publish")
-    def publish(self, context=None):
+    def publish(self):
         """
         Publish the document.
         """
         # Also do something here
         # ...
-        if not self._document.email_verified:
+        if not self.document.email_verified:
             raise WorkflowTransitionException("Email address is not verified.")
 
 
@@ -92,6 +94,26 @@ class MyDocumentWorkflowCustom(MyDocumentWorkflow):
             document['status'] = value
         else:
             document.status = value
+
+
+class MyDocumentExternalTransitions(DocumentWorkflow):
+    """
+    Workflow with transitions defined externally.
+    """
+    state_attr = 'status'
+
+    draft = WorkflowState(0, title="Draft",     description="Only owner can see it")
+    published = WorkflowState(1, title="Published", description="Published")
+
+
+@MyDocumentExternalTransitions.draft.transition(MyDocumentExternalTransitions.published, None, title="Publish")
+def publish_ext(workflow):
+    pass
+
+
+@MyDocumentExternalTransitions.published.transition(MyDocumentExternalTransitions.draft, None, title="Unpublish")
+def unpublish_ext(workflow):
+    pass
 
 
 class TestWorkflow(unittest.TestCase):
@@ -137,15 +159,16 @@ class TestWorkflow(unittest.TestCase):
         wf.submit()
         self.assertEqual(wf.state, wf.pending)
         self.assertRaises(WorkflowPermissionException, wf.publish)
-        self.assertRaises(WorkflowTransitionException, wf.publish, context={'is_admin': True})
+        wf.context = {'is_admin': True}
+        self.assertRaises(WorkflowTransitionException, wf.publish)
 
     def test_transition_sequence(self):
         doc = MyDocument()
         doc.status = 0
-        wf = MyDocumentWorkflow(doc)
+        wf = MyDocumentWorkflow(doc, context={'is_admin': True})
         wf.submit()
         doc.email_verified = True
-        wf.publish(context={'is_admin': True})
+        wf.publish()
         self.assertEqual(wf.state, wf.published)
 
     def test_inherited_workflow(self):
@@ -222,8 +245,18 @@ class TestWorkflow(unittest.TestCase):
         doc.status = 0
         self.assertTrue(isinstance(doc.workflow(), MyDocumentWorkflow))
         self.assertRaises(WorkflowException, MyDocumentWorkflow.apply_on, MyDocument)
+        # XXX: This test fails. It should not. No idea why.
         self.assertTrue(doc.workflow().draft())
 
+    def test_external_transitions(self):
+        doc = MyDocument()
+        doc.status = 0
+        workflow = MyDocumentExternalTransitions(doc)
+        self.assertEqual(workflow.transitions().keys(), ['publish_ext'])
+        publish_ext(workflow)
+        self.assertTrue(doc.status == 1)
+        self.assertEqual(workflow.transitions().keys(), ['unpublish_ext'])
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     unittest.main()

@@ -121,15 +121,15 @@ class WorkflowState(object):
         """
         def inner(f):
             @wraps(f)
-            def decorated_function(workflow, context=None, *args, **kwargs):
+            def decorated_function(workflow, *args, **kwargs):
                 # Perform tests: is state correct? Is permission available?
                 if workflow.state != self:
                     raise WorkflowTransitionException("Incorrect state")
                 if permission and (permission not in
-                                   workflow.permissions(context)):
+                                   workflow.permissions()):
                     raise WorkflowPermissionException(
                         "Permission not available")
-                result = f(workflow, context, *args, **kwargs)
+                result = f(workflow, *args, **kwargs)
                 workflow._setStateValue(state_to.value)
                 return result
 
@@ -220,8 +220,9 @@ class DocumentWorkflow(object):
     state_get = None
     state_set = None
 
-    def __init__(self, document):
-        self._document = document
+    def __init__(self, document, context=None):
+        self.document = document
+        self.context = context
         self._state = None  # No default state yet
         state = self._getStateValue()
         if state not in self._state_values:
@@ -261,16 +262,16 @@ class DocumentWorkflow(object):
             raise WorkflowStateException("State cannot be read")
 
     def _getStateValue(self):
-        return self._getStateValueInner(self._document)
+        return self._getStateValueInner(self.document)
 
     def _setStateValue(self, value):
         # Set state value on document
         if self.state_attr:
-            setattr(self._document, self.state_attr, value)
+            setattr(self.document, self.state_attr, value)
         elif self.state_key:
-            self._document[self.state_key] = value
+            self.document[self.state_key] = value
         elif self.state_set:
-            self.state_set(self._document, value)
+            self.state_set(self.document, value)
         else:
             raise WorkflowStateException("State cannot be changed")
 
@@ -285,18 +286,18 @@ class DocumentWorkflow(object):
         """
         return list(cls._states_sorted)  # Make a shallow copy
 
-    def permissions(self, context=None):
+    def permissions(self):
         """
-        Permissions available in given context. This method must be
+        Permissions available in the current context. This method must be
         overridden by subclasses.
         """
         return []
 
-    def transitions(self, context=None):
+    def transitions(self):
         """
-        Transitions available in the current state and given context.
+        Transitions available in the current state and context.
         """
-        permissions = self.permissions(context)
+        permissions = self.permissions()
         result = OrderedDict()
         for k, v in self.state._transitions.iteritems():
             if v.permission is None or v.permission in permissions:

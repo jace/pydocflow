@@ -70,7 +70,8 @@ class WorkflowTransition(object):
                 category='',
                 permission='',
                 state_from=None,
-                state_to=None):
+                state_to=None,
+                **kwargs):
         self.f = f
         self.name = name
         self.title = title
@@ -79,9 +80,10 @@ class WorkflowTransition(object):
         self.permission = permission
         self.state_from = state_from
         self.state_to = state_to
+        self.__dict__.update(kwargs)
 
-    def __call__(self, *args, **kw):
-        return self.f(*args, **kw)
+    def __call__(self, *args, **kwargs):
+        return self.f(*args, **kwargs)
 
 
 class WorkflowState(object):
@@ -124,7 +126,7 @@ class WorkflowState(object):
         return not self.__eq__(other)
 
     def transition(self, state_to, permission,
-                   title='', description='', category=''):
+                   title='', description='', category='', **kwargs):
         """
         Decorator for transition functions.
         """
@@ -151,7 +153,8 @@ class WorkflowState(object):
                 category=category,
                 permission=permission,
                 state_from=self,
-                state_to=state_to)
+                state_to=state_to,
+                **kwargs)
             # TODO: Allow transitions to be attached to more than one state_from
             self._transitions[f.__name__] = t
             return decorated_function

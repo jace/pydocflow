@@ -13,29 +13,20 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
 
-# XXX: Make this more elegant. How do you make docflow's exceptions compatible
-# with exceptions raised by frameworks, without importing framework-specific
-# exceptions?
-try:
-    from werkzeug.exceptions import Forbidden
-except ImportError:
-    class Forbidden(Exception):
-        pass
-
 
 class WorkflowException(Exception):
     pass
 
 
-class WorkflowStateException(WorkflowException, Forbidden):
+class WorkflowStateException(WorkflowException):
     pass
 
 
-class WorkflowTransitionException(WorkflowException, Forbidden):
+class WorkflowTransitionException(WorkflowException):
     pass
 
 
-class WorkflowPermissionException(WorkflowException, Forbidden):
+class WorkflowPermissionException(WorkflowException):
     pass
 
 
@@ -90,8 +81,14 @@ class WorkflowState(object):
     """
     State in a workflow.
     """
+
+    exception_state = WorkflowStateException
+    exception_transition = WorkflowTransitionException
+    exception_permission = WorkflowPermissionException
+
     def __init__(self, value, title=u'', description=u''):
         self.value = value
+        self.values = [value]
         self.name = None  # Not named yet
         self.title = title
         self.description = description
@@ -116,7 +113,7 @@ class WorkflowState(object):
 
     def __call__(self):
         if self._parent is None or self._parent() is None:
-            raise WorkflowStateException("Unattached state")
+            raise self.exception_state("Unattached state")
         return self._parent()._getStateValue() == self.value
 
     def __eq__(self, other):
@@ -135,10 +132,10 @@ class WorkflowState(object):
             def decorated_function(workflow, *args, **kwargs):
                 # Perform tests: is state correct? Is permission available?
                 if workflow.state != self:
-                    raise WorkflowTransitionException("Incorrect state")
+                    raise self.exception_transition("Incorrect state")
                 if permission and (permission not in
                                    workflow.permissions()):
-                    raise WorkflowPermissionException(
+                    raise self.exception_permission(
                         "Permission not available")
                 result = f(workflow, *args, **kwargs)
                 workflow._setStateValue(state_to.value)
@@ -172,13 +169,14 @@ class WorkflowStateGroup(WorkflowState):
             if isinstance(item, WorkflowState):
                 value[counter] = item.value
         super(WorkflowStateGroup, self).__init__(value, title, description)
+        self.values = value
 
     def __repr__(self):
         return '<WorkflowStateGroup %s>' % repr(self.title)
 
     def __call__(self):
         if self._parent is None or self._parent() is None:
-            raise WorkflowStateException("Unattached state")
+            raise self.exception_state("Unattached state")
         return self._parent()._getStateValue() in self.value
 
 
@@ -220,6 +218,9 @@ class DocumentWorkflow(object):
     """
     __metaclass__ = _InitDocumentWorkflow
 
+    #: Subclasses may override the exception that is raised
+    exception_state = WorkflowStateException
+
     #: One of these attributes must be overridden by subclasses
 
     #: State is contained in an attribute on the document
@@ -238,7 +239,7 @@ class DocumentWorkflow(object):
         self._state = None  # No default state yet
         state = self._getStateValue()
         if state not in self._state_values:
-            raise WorkflowStateException("Unknown state")
+            raise self.exception_state("Unknown state")
         # Attach states to self. Make copy and iterate:
         # This code is used just to make it possible to test
         # if a state is active by calling it: workflow.draft(), etc
@@ -262,16 +263,16 @@ class DocumentWorkflow(object):
             try:
                 return getattr(document, cls.state_attr)
             except AttributeError:
-                raise WorkflowStateException("Unknown state")
+                raise cls.exception_state("Unknown state")
         elif cls.state_key:
             try:
                 return document[cls.state_key]
             except:
-                raise WorkflowStateException("Unknown state")
+                raise cls.exception_state("Unknown state")
         elif cls.state_get:
             return cls.state_get(document)
         else:
-            raise WorkflowStateException("State cannot be read")
+            raise cls.exception_state("State cannot be read")
 
     def _getStateValue(self):
         return self._getStateValueInner(self.document)
@@ -285,7 +286,7 @@ class DocumentWorkflow(object):
         elif self.state_set:
             self.state_set(self.document, value)
         else:
-            raise WorkflowStateException("State cannot be changed")
+            raise self.exception_state("State cannot be changed")
 
     @property
     def state(self):
@@ -323,7 +324,11 @@ class DocumentWorkflow(object):
             """Return a workflow wrapper for this document."""
             # Workflows can be re-instantiated anytime because they don't store
             # any data on the workflow object. All storage is in the document.
-            return cls(self)
+            if hasattr(self, '_workflow'):
+                return self._workflow
+            else:
+                self._workflow = cls(self)
+            return self._workflow
         if hasattr(docclass, 'workflow'):
             raise WorkflowException(
                 "This document class already has workflow.")

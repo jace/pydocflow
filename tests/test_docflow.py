@@ -245,8 +245,10 @@ class TestWorkflow(unittest.TestCase):
         doc.status = 0
         self.assertTrue(isinstance(doc.workflow(), MyDocumentWorkflow))
         self.assertRaises(WorkflowException, MyDocumentWorkflow.apply_on, MyDocument)
-        # XXX: This test fails. It should not. No idea why.
         self.assertTrue(doc.workflow().draft())
+        wf1 = doc.workflow()
+        wf2 = doc.workflow()
+        self.assertTrue(wf1 is wf2)
 
     def test_external_transitions(self):
         doc = MyDocument()

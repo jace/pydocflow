@@ -1,6 +1,5 @@
 import os
 from setuptools import setup, find_packages
-import docflow
 
 here = os.path.abspath(os.path.dirname(__file__))
 README = unicode(open(os.path.join(here, 'README.rst')).read(), 'utf-8')
@@ -11,7 +10,7 @@ requires = [
     ]
 
 setup(name='docflow',
-      version=docflow.__version__,
+      version='0.3',
       description='Python Document Workflows',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[

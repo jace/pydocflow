@@ -7,3 +7,6 @@ install:
   - python setup.py -q install
 # command to run tests
 script: nosetests 
+notifications:
+  email: false
+  irc: "irc.freenode.net#hasgeek"

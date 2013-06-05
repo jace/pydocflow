@@ -4,7 +4,8 @@
 Docflow: Python Document Workflows
 """
 
-__version__ = '0.3'
+from __future__ import absolute_import
+from ._version import __version__
 
 from functools import wraps
 import weakref

@@ -1,22 +1,33 @@
 import os
-from setuptools import setup, find_packages
+import re
+import sys
+from setuptools import setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 README = unicode(open(os.path.join(here, 'README.rst')).read(), 'utf-8')
 CHANGES = unicode(open(os.path.join(here, 'CHANGES.rst')).read(), 'utf-8')
+versionfile = open(os.path.join(here, "docflow", "_version.py")).read()
 
-requires = [
-    'ordereddict',
-    ]
+mo = re.search(r"^__version__\s*=\s*['\"]([^'\"]*)['\"]", versionfile, re.M)
+if mo:
+    version = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in coaster/_version.py.")
 
-setup(name='docflow',
-      version='0.3',
-      description='Python Document Workflows',
-      long_description=README + '\n\n' + CHANGES,
-      classifiers=[
+if sys.hexversion < 0x2070000:
+    # 2.6 and below require ordereddict
+    requires = ['ordereddict']
+else:
+    requires = []
+
+
+setup(
+    name='docflow',
+    version=version,
+    description='Python Document Workflows',
+    long_description=README + '\n\n' + CHANGES,
+    classifiers=[
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.3",
-        "Programming Language :: Python :: 2.4",
         "Programming Language :: Python :: 2.5",
         "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
@@ -26,13 +37,13 @@ setup(name='docflow',
         "Development Status :: 3 - Alpha",
         "Topic :: Software Development :: Libraries",
         ],
-      author='Kiran Jonnalagadda',
-      author_email='jace@pobox.com',
-      url='http://github.com/jace/pydocflow',
-      keywords='workflow',
-      packages=find_packages(),
-      include_package_data=True,
-      zip_safe=True,
-      test_suite='tests',
-      install_requires=requires,
-      )
+    author='Kiran Jonnalagadda',
+    author_email='jace@pobox.com',
+    url='http://github.com/jace/pydocflow',
+    keywords='workflow',
+    packages=['docflow'],
+    include_package_data=True,
+    zip_safe=True,
+    test_suite='tests',
+    install_requires=requires,
+    )

@@ -2,7 +2,8 @@
 
 import unittest
 from docflow import (DocumentWorkflow, WorkflowState, WorkflowStateGroup, WorkflowException,
-    WorkflowStateException, WorkflowTransitionException, WorkflowPermissionException)
+                     WorkflowStateException, WorkflowTransitionException, WorkflowPermissionException,
+                     InteractiveTransition)
 
 
 class MyDocument(object):
@@ -10,6 +11,7 @@ class MyDocument(object):
         self.status = None
         self.email = ''
         self.email_verified = False
+        self.comments = None
 
 
 class MyDocumentWorkflow(DocumentWorkflow):
@@ -24,11 +26,11 @@ class MyDocumentWorkflow(DocumentWorkflow):
 
     # Define a state. First parameter is the state tracking value,
     # stored in state_attr
-    draft = WorkflowState(0, title="Draft",     description="Only owner can see it")
-    pending = WorkflowState(1, title="Pending",   description="Pending review")
+    draft = WorkflowState(0, title="Draft", description="Only owner can see it")
+    pending = WorkflowState(1, title="Pending", description="Pending review")
     published = WorkflowState(2, title="Published", description="Published")
     withdrawn = WorkflowState(3, title="Withdrawn", description="Withdrawn by owner")
-    rejected = WorkflowState(4, title="Rejected",  description="Rejected by reviewer")
+    rejected = WorkflowState(4, title="Rejected", description="Rejected by reviewer")
 
     # Define a state group
     not_published = WorkflowStateGroup([0, 1], title="Not Published")
@@ -38,11 +40,12 @@ class MyDocumentWorkflow(DocumentWorkflow):
         """
         Return permissions available to current user. A permission can be any hashable token.
         """
-        base_permissions = super(MyDocumentWorkflow, self).permissions()
-        if self.context and self.context['is_admin']:
-            return base_permissions + ['can_publish']
-        else:
-            return base_permissions + []
+        perms = super(MyDocumentWorkflow, self).permissions()
+        if self.context and self.context.get('is_admin'):
+            perms = perms + ['can_publish', 'can_return']
+        if self.context and self.context.get('is_reviewer'):
+            perms = perms + ['can_return']
+        return perms
 
     # Define a transition. There can be multiple transitions connecting any two states.
     # Parameters: newstate, permission, title, description
@@ -65,6 +68,34 @@ class MyDocumentWorkflow(DocumentWorkflow):
         if not self.document.email_verified:
             raise WorkflowTransitionException("Email address is not verified.")
 
+    @draft.transition(withdrawn, None, title='Withdraw')
+    @pending.transition(withdrawn, None, title='Withdraw')
+    @published.transition(withdrawn, None, title='Withdraw')
+    def withdraw(self):
+        """
+        Withdraw the document.
+        """
+        pass  # State will change automatically
+
+    @pending.transition(draft, 'can_return', title='Return for review')
+    class ReturnForReview(InteractiveTransition):
+        def form(self):
+            return {'comments': basestring}
+
+        def validate(self, form):
+            try:
+                assert 'comments' in form
+                assert isinstance(form['comments'], basestring)
+            except AssertionError:
+                return False
+            else:
+                return True
+
+        # The submit method gets wrapped by the class decorator
+        def submit(self, form):
+            self.document.comments = form['comments']
+            # State will change automatically when this method returns
+
 
 class MyDocumentWorkflowExtraState(MyDocumentWorkflow):
     expired = WorkflowState(5, title="Expired")
@@ -79,7 +110,7 @@ class MyDocumentWorkflowCustom(MyDocumentWorkflow):
     state_attr = None
 
     @classmethod
-    def state_get(self, document):
+    def state_get(cls, document):
         """
         Demo state_get method.
         """
@@ -136,6 +167,8 @@ class TestWorkflow(unittest.TestCase):
         doc.status = 0
         wf = MyDocumentWorkflow(doc)
         self.assertEqual(wf.state, wf.draft)
+        for state in (wf.pending, wf.published, wf.withdrawn, wf.rejected):
+            self.assertNotEqual(wf.state, state)
 
     def test_transition(self):
         doc = MyDocument()
@@ -148,7 +181,7 @@ class TestWorkflow(unittest.TestCase):
         doc = MyDocument()
         doc.status = 0
         wf = MyDocumentWorkflow(doc)
-        self.assertEqual(len(wf.transitions()), 1)
+        self.assertEqual(len(wf.transitions()), 2)
         self.assertEqual(wf.transitions()['submit'].title, 'Submit')
 
     def test_invalid_transitions(self):
@@ -171,6 +204,24 @@ class TestWorkflow(unittest.TestCase):
         wf.publish()
         self.assertEqual(wf.state, wf.published)
 
+    def test_multi_transition(self):
+        doc = MyDocument()
+        doc.status = MyDocumentWorkflow.draft.value
+        wf = MyDocumentWorkflow(doc, context={'is_admin': True})
+        self.assertEqual(wf.state, wf.draft)
+        wf.withdraw()
+        self.assertEqual(wf.state, wf.withdrawn)
+
+        doc.status = MyDocumentWorkflow.pending.value
+        self.assertEqual(wf.state, wf.pending)
+        wf.withdraw()
+        self.assertEqual(wf.state, wf.withdrawn)
+
+        doc.status = MyDocumentWorkflow.published.value
+        self.assertEqual(wf.state, wf.published)
+        wf.withdraw()
+        self.assertEqual(wf.state, wf.withdrawn)
+
     def test_inherited_workflow(self):
         doc = MyDocument()
         doc.status = 0
@@ -183,9 +234,9 @@ class TestWorkflow(unittest.TestCase):
 
     def test_state_seq(self):
         self.assertEqual([s.name for s in MyDocumentWorkflow.states()],
-            ['draft', 'pending', 'published', 'withdrawn', 'rejected'])
+                         ['draft', 'pending', 'published', 'withdrawn', 'rejected'])
         self.assertEqual([s.name for s in MyDocumentWorkflowExtraState.states()],
-            ['draft', 'pending', 'published', 'withdrawn', 'rejected', 'expired'])
+                         ['draft', 'pending', 'published', 'withdrawn', 'rejected', 'expired'])
 
     def test_state_boolean(self):
         doc = MyDocument()
@@ -256,8 +307,47 @@ class TestWorkflow(unittest.TestCase):
         workflow = MyDocumentExternalTransitions(doc)
         self.assertEqual(workflow.transitions().keys(), ['publish_ext'])
         publish_ext(workflow)
-        self.assertTrue(doc.status == 1)
+        self.assertEqual(doc.status, 1)
         self.assertEqual(workflow.transitions().keys(), ['unpublish_ext'])
+
+    def test_sort_documents(self):
+        doc1 = MyDocument()
+        doc1.status = 0
+        doc2 = MyDocument()
+        doc2.status = 0
+        doc3 = MyDocument()
+        doc3.status = 1
+        self.assertEqual(MyDocumentWorkflow.sort_documents([doc1, doc2, doc3]),
+                         {'draft': [doc1, doc2], 'pending': [doc3]})
+
+    def test_interactive_transitions(self):
+        doc = MyDocument()
+        doc.status = 0  # Draft
+        workflow = MyDocumentWorkflow(doc)
+        # Raises incorrect state
+        self.assertRaises(WorkflowTransitionException, workflow.ReturnForReview)
+        doc.status = 1  # Pending
+        # Raises incorrect permission
+        self.assertRaises(WorkflowPermissionException, workflow.ReturnForReview)
+        workflow.context = {'is_reviewer': True}
+
+        # The transition works now. Test its methods
+        return_for_review = workflow.ReturnForReview()
+        self.assertEqual(return_for_review.form(), {'comments': basestring})
+        self.assertFalse(return_for_review.validate({}))
+        self.assertFalse(return_for_review.validate({'comments': 0}))
+        self.assertTrue(return_for_review.validate({'comments': 'test comment'}))
+
+        # For coverage, test repr
+        self.assertEqual(repr(return_for_review), '<InteractiveTransition ReturnForReview>')
+
+        # Submit the transition (part 1, pre submit status)
+        self.assertEqual(doc.status, 1)
+        self.assertEqual(doc.comments, None)
+        # Submit the transition (part 2, post submit status)
+        return_for_review.submit({'comments': 'test comment'})
+        self.assertEqual(doc.status, 0)
+        self.assertEqual(doc.comments, 'test comment')
 
 
 if __name__ == '__main__':

@@ -1,3 +1,9 @@
+0.3.2
+-----
+
+- Transition handlers can now connect multiple from/to states
+- New: interactive transitions with form/validate/submit methods.
+
 0.3.1
 -----
 

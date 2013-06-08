@@ -9,10 +9,13 @@ from ._version import __version__
 
 from functools import wraps
 import weakref
+from types import MethodType
 try:
     from collections import OrderedDict
-except ImportError:
+except ImportError:  # pragma: no cover
     from ordereddict import OrderedDict
+
+__all__ = ['DocumentWorkflow', 'WorkflowState', 'WorkflowStateGroup', 'InteractiveTransition']
 
 
 class WorkflowException(Exception):
@@ -56,26 +59,50 @@ class WorkflowTransition(object):
     """
     Transition between states.
     """
-    def __init__(self, f, name,
-                title='',
-                description='',
-                category='',
-                permission='',
-                state_from=None,
-                state_to=None,
-                **kwargs):
-        self.f = f
+    def __init__(self, name,
+                 title='',
+                 description='',
+                 category='',
+                 permission='',
+                 state_from=None,
+                 state_to=None,
+                 **kwargs):
         self.name = name
         self.title = title
         self.description = description
         self.category = category
         self.permission = permission
-        self.state_from = state_from
-        self.state_to = state_to
+        self.state_from = weakref.ref(state_from)
+        self.state_to = weakref.ref(state_to)
         self.__dict__.update(kwargs)
 
-    def __call__(self, *args, **kwargs):
-        return self.f(*args, **kwargs)
+
+class InteractiveTransition(object):
+    """
+    Multipart workflow transitions. Subclasses of this class may provide
+    methods to return a form, validate the form and submit the form.
+    Implementing a :meth:`submit` method is mandatory. :meth:`submit`
+    will be wrapped by the :meth:`~WorkflowState.transition` decorator to
+    automatically update the document's state value.
+
+    Instances of :class:`InteractiveTransition` will receive
+    :attr:`workflow` and :attr:`document` attributes pointing to the workflow
+    instance and document respectively.
+    """
+    def __init__(self, workflow):
+        self.workflow = workflow
+        self.document = workflow.document
+
+    def __repr__(self):
+        return '<InteractiveTransition %s>' % self.__class__.__name__
+
+    def submit(self):  # pragma: no cover
+        """
+        InteractiveTransition subclasses must override this method. If this
+        method returns without raising an exception, the document's state
+        will be updated automatically.
+        """
+        raise NotImplementedError
 
 
 class WorkflowState(object):
@@ -101,8 +128,8 @@ class WorkflowState(object):
         """
         Attach this workflow state to a workflow instance.
         """
-        # XXX: This isn't particularly efficient. There has to be a way to
-        # wrap the existing object instead of copying it.
+        # Attaching works by creating a new copy of the state with _parent
+        # now referring to the workflow instance.
         newstate = self.__class__(self.value, self.title, self.description)
         newstate.name = self.name
         newstate._parent = weakref.ref(workflow)
@@ -118,7 +145,7 @@ class WorkflowState(object):
         return self._parent()._getStateValue() == self.value
 
     def __eq__(self, other):
-        return self.value == other.value
+        return isinstance(other, WorkflowState) and self.value == other.value
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -129,32 +156,42 @@ class WorkflowState(object):
         Decorator for transition functions.
         """
         def inner(f):
+            if hasattr(f, '_workflow_transition_inner'):
+                f = f._workflow_transition_inner
+
             @wraps(f)
             def decorated_function(workflow, *args, **kwargs):
                 # Perform tests: is state correct? Is permission available?
-                if workflow.state != self:
+                if f.__name__ not in workflow.state._transitions:
                     raise self.exception_transition("Incorrect state")
-                if permission and (permission not in
-                                   workflow.permissions()):
+                t = workflow.state._transitions[f.__name__]
+                if t.permission and (t.permission not in
+                                     workflow.permissions()):
                     raise self.exception_permission(
                         "Permission not available")
                 result = f(workflow, *args, **kwargs)
-                workflow._setStateValue(state_to.value)
+                if isinstance(result, InteractiveTransition):
+                    @wraps(f.submit)
+                    def workflow_submit(self, *args, **kwargs):
+                        r = f.submit(self, *args, **kwargs)
+                        workflow._setStateValue(t.state_to().value)
+                        return r
+                    result.submit = MethodType(workflow_submit, result, f)
+                else:
+                    workflow._setStateValue(t.state_to().value)
+
                 return result
 
-            # XXX: Doesn't this cause circular references?
-            # We have states referring to each other.
-            t = WorkflowTransition(decorated_function,
-                name=f.__name__,
-                title=title,
-                description=description,
-                category=category,
-                permission=permission,
-                state_from=self,
-                state_to=state_to,
-                **kwargs)
-            # TODO: Allow transitions to be attached to more than one state_from
+            t = WorkflowTransition(name=f.__name__,
+                                   title=title,
+                                   description=description,
+                                   category=category,
+                                   permission=permission,
+                                   state_from=self,
+                                   state_to=state_to,
+                                   **kwargs)
             self._transitions[f.__name__] = t
+            decorated_function._workflow_transition_inner = f
             return decorated_function
         return inner
 
@@ -208,7 +245,7 @@ class _InitDocumentWorkflow(type):
                     attrs['_state_values'][stateob.value] = stateob
 
         attrs['_states_sorted'] = sorted(attrs['_states'].values(),
-            key=lambda s: s._creation_order)
+                                         key=lambda s: s._creation_order)
         return super(_InitDocumentWorkflow, cls).__new__(
             cls, name, bases, attrs)
 
@@ -272,7 +309,7 @@ class DocumentWorkflow(object):
                 raise cls.exception_state("Unknown state")
         elif cls.state_get:
             return cls.state_get(document)
-        else:
+        else:  # pragma: no cover
             raise cls.exception_state("State cannot be read")
 
     def _getStateValue(self):
@@ -286,7 +323,7 @@ class DocumentWorkflow(object):
             self.document[self.state_key] = value
         elif self.state_set:
             self.state_set(self.document, value)
-        else:
+        else:  # pragma: no cover
             raise self.exception_state("State cannot be changed")
 
     @property
@@ -342,9 +379,7 @@ class DocumentWorkflow(object):
         Returns a dictionary of lists.
         """
         result = {}
-        for state in cls.states():
-            result[state.name] = []
         for doc in documents:
             state = cls._state_values[cls._getStateValueInner(doc)]
-            result[state.name].append(doc)
+            result.setdefault(state.name, []).append(doc)
         return result

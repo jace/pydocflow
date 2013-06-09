@@ -4,8 +4,8 @@ import sys
 from setuptools import setup
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = unicode(open(os.path.join(here, 'README.rst')).read(), 'utf-8')
-CHANGES = unicode(open(os.path.join(here, 'CHANGES.rst')).read(), 'utf-8')
+README = open(os.path.join(here, 'README.rst')).read()
+CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
 versionfile = open(os.path.join(here, "docflow", "_version.py")).read()
 
 mo = re.search(r"^__version__\s*=\s*['\"]([^'\"]*)['\"]", versionfile, re.M)
@@ -35,7 +35,7 @@ setup(
         "Intended Audience :: Developers",
         "Development Status :: 3 - Alpha",
         "Topic :: Software Development :: Libraries",
-        ],
+    ],
     author='Kiran Jonnalagadda',
     author_email='jace@pobox.com',
     url='http://github.com/jace/pydocflow',
@@ -45,4 +45,4 @@ setup(
     zip_safe=True,
     test_suite='tests',
     install_requires=requires,
-    )
+)

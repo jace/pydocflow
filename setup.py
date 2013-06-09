@@ -16,9 +16,9 @@ else:
 
 if sys.hexversion < 0x2070000:
     # 2.6 and below require ordereddict
-    requires = ['ordereddict']
+    requires = ['ordereddict', 'six']
 else:
-    requires = []
+    requires = ['six']
 
 
 setup(

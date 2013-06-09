@@ -4,9 +4,7 @@
 Docflow: Python Document Workflows
 """
 
-from __future__ import absolute_import
-from ._version import __version__
-
+import six
 from functools import wraps
 import weakref
 from types import MethodType
@@ -14,6 +12,8 @@ try:
     from collections import OrderedDict
 except ImportError:  # pragma: no cover
     from ordereddict import OrderedDict
+
+from ._version import __version__
 
 __all__ = ['DocumentWorkflow', 'WorkflowState', 'WorkflowStateGroup', 'InteractiveTransition']
 
@@ -176,7 +176,10 @@ class WorkflowState(object):
                         r = f.submit(self, *args, **kwargs)
                         workflow._setStateValue(t.state_to().value)
                         return r
-                    result.submit = MethodType(workflow_submit, result, f)
+                    if six.PY3:
+                        result.submit = MethodType(workflow_submit, result)
+                    else:
+                        result.submit = MethodType(workflow_submit, result, f)
                 else:
                     workflow._setStateValue(t.state_to().value)
 
@@ -250,11 +253,10 @@ class _InitDocumentWorkflow(type):
             cls, name, bases, attrs)
 
 
-class DocumentWorkflow(object):
+class DocumentWorkflow(six.with_metaclass(_InitDocumentWorkflow)):
     """
     Base class for document workflows.
     """
-    __metaclass__ = _InitDocumentWorkflow
 
     #: Subclasses may override the exception that is raised
     exception_state = WorkflowStateException
@@ -350,7 +352,7 @@ class DocumentWorkflow(object):
         """
         permissions = self.permissions()
         result = OrderedDict()
-        for k, v in self.state._transitions.iteritems():
+        for k, v in self.state._transitions.items():
             if v.permission is None or v.permission in permissions:
                 result[k] = v
         return result

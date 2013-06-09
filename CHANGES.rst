@@ -3,6 +3,7 @@
 
 - Transition handlers can now connect multiple from/to states
 - New: interactive transitions with form/validate/submit methods.
+- Python 3 compatibility
 
 0.3.1
 -----

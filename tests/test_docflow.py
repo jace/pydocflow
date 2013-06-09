@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import six
 import unittest
 from docflow import (DocumentWorkflow, WorkflowState, WorkflowStateGroup, WorkflowException,
                      WorkflowStateException, WorkflowTransitionException, WorkflowPermissionException,
@@ -80,12 +81,12 @@ class MyDocumentWorkflow(DocumentWorkflow):
     @pending.transition(draft, 'can_return', title='Return for review')
     class ReturnForReview(InteractiveTransition):
         def form(self):
-            return {'comments': basestring}
+            return {'comments': six.string_types}
 
         def validate(self, form):
             try:
                 assert 'comments' in form
-                assert isinstance(form['comments'], basestring)
+                assert isinstance(form['comments'], six.string_types)
             except AssertionError:
                 return False
             else:
@@ -305,10 +306,10 @@ class TestWorkflow(unittest.TestCase):
         doc = MyDocument()
         doc.status = 0
         workflow = MyDocumentExternalTransitions(doc)
-        self.assertEqual(workflow.transitions().keys(), ['publish_ext'])
+        self.assertEqual(list(workflow.transitions().keys()), ['publish_ext'])
         publish_ext(workflow)
         self.assertEqual(doc.status, 1)
-        self.assertEqual(workflow.transitions().keys(), ['unpublish_ext'])
+        self.assertEqual(list(workflow.transitions().keys()), ['unpublish_ext'])
 
     def test_sort_documents(self):
         doc1 = MyDocument()
@@ -333,7 +334,7 @@ class TestWorkflow(unittest.TestCase):
 
         # The transition works now. Test its methods
         return_for_review = workflow.ReturnForReview()
-        self.assertEqual(return_for_review.form(), {'comments': basestring})
+        self.assertEqual(return_for_review.form(), {'comments': six.string_types})
         self.assertFalse(return_for_review.validate({}))
         self.assertFalse(return_for_review.validate({'comments': 0}))
         self.assertTrue(return_for_review.validate({'comments': 'test comment'}))

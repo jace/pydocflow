@@ -42,8 +42,7 @@ def _set_creation_order(instance):
     Assign a '_creation_order' sequence to the given instance.
 
     This allows multiple instances to be sorted in order of creation
-    (typically within a single thread; the counter is not particularly
-    threadsafe).
+    (typically within a single thread; the counter is not threadsafe).
 
     This code is from SQLAlchemy, available here:
     http://www.sqlalchemy.org/trac/browser/lib/sqlalchemy/util/langhelpers.py#L836
@@ -176,7 +175,7 @@ class WorkflowState(object):
                         r = f.submit(self, *args, **kwargs)
                         workflow._setStateValue(t.state_to().value)
                         return r
-                    if six.PY3:
+                    if six.PY3:  # pragma: no cover
                         result.submit = MethodType(workflow_submit, result)
                     else:
                         result.submit = MethodType(workflow_submit, result, f)
@@ -201,14 +200,12 @@ class WorkflowState(object):
 
 class WorkflowStateGroup(WorkflowState):
     """
-    Group of states in a workflow. The value parameter is a list of value
-    tokens or WorklowState instances.
+    Group of states in a workflow. The value parameter is a list of values
+    or WorklowState instances.
     """
     def __init__(self, value, title=u'', description=u''):
-        value = list(value)  # Make a copy before editing
-        for counter, item in enumerate(value):
-            if isinstance(item, WorkflowState):
-                value[counter] = item.value
+        # Convert all WorkflowState instances to values
+        value = [item.value if isinstance(item, WorkflowState) else item for item in value]
         super(WorkflowStateGroup, self).__init__(value, title, description)
         self.values = value
 
@@ -219,6 +216,9 @@ class WorkflowStateGroup(WorkflowState):
         if self._parent is None or self._parent() is None:
             raise self.exception_state("Unattached state")
         return self._parent()._getStateValue() in self.value
+
+    def transition(self, *args, **kwargs):
+        raise SyntaxError("WorkflowStateGroup instances cannot have transitions")
 
 
 class _InitDocumentWorkflow(type):
@@ -260,6 +260,9 @@ class DocumentWorkflow(six.with_metaclass(_InitDocumentWorkflow)):
 
     #: Subclasses may override the exception that is raised
     exception_state = WorkflowStateException
+
+    #: The name of this workflow (for when documents can have multiple workflows)
+    name = None
 
     #: One of these attributes must be overridden by subclasses
 
@@ -360,19 +363,25 @@ class DocumentWorkflow(six.with_metaclass(_InitDocumentWorkflow)):
     @classmethod
     def apply_on(cls, docclass):
         """Apply workflow on specified document class."""
-        def workflow(self):
+        def workflow(self, name=None):
             """Return a workflow wrapper for this document."""
+            if not hasattr(self, '_workflow_instances'):
+                self._workflow_instances = {}
             # Workflows can be re-instantiated anytime because they don't store
-            # any data on the workflow object. All storage is in the document.
-            if hasattr(self, '_workflow'):
-                return self._workflow
-            else:
-                self._workflow = cls(self)
-            return self._workflow
-        if hasattr(docclass, 'workflow'):
+            # any data. All storage is in the document. However, there is a small
+            # time cost to instantiation, so we cache when we can.
+            if name not in self._workflow_instances:
+                self._workflow_instances[name] = self._workflows[name](self)
+            return self._workflow_instances[name]
+
+        if not hasattr(docclass, '_workflows'):
+            docclass._workflows = {}
+        if cls.name in docclass._workflows:
             raise WorkflowException(
-                "This document class already has workflow.")
-        docclass.workflow = workflow
+                u"This document class already has a workflow named {name}".format(name=repr(cls.name)))
+        docclass._workflows[cls.name] = cls
+        if not hasattr(docclass, 'workflow'):
+            docclass.workflow = workflow
 
     @classmethod
     def sort_documents(cls, documents):

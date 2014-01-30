@@ -2,8 +2,9 @@
 -----
 
 - Transition handlers can now connect multiple from/to states
-- New: interactive transitions with form/validate/submit methods.
+- New: interactive transitions with form/validate/submit methods
 - Python 3 compatibility
+- Support for multiple workflows per document class, with workflow names
 
 0.3.1
 -----

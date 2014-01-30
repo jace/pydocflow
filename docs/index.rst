@@ -83,14 +83,15 @@ represents this state, and the transitions between states::
       withdrawn = WorkflowState(3, title="Withdrawn", description="Withdrawn by owner")
       rejected  = WorkflowState(4, title="Rejected",  description="Rejected by reviewer")
 
-      # Define a state group
-      not_published = WorkflowStateGroup([0, 1], title="Not Published")
+      # Define a state group (with either values or WorkflowState instances)
+      not_published = WorkflowStateGroup([0, pending], title="Not Published")
 
       def permissions(self, context=None):
           """
           Return permissions available to current user. A permission can be any hashable token.
+          The ``context`` is any value passed in by the caller (we assume a dict here).
           """
-          if context and context['is_admin']:
+          if context and context.get('is_admin'):
               return ['can_publish']
           else:
               return []
@@ -107,6 +108,7 @@ represents this state, and the transitions between states::
           pass # State will be changed automatically if we don't raise an exception
 
       @pending.transition(published, 'can_publish', title="Publish")
+      @withdrawn.transition(published, 'can_publish', title="Publish")
       def publish(self, context=None):
           """
           Publish the document.
@@ -159,10 +161,11 @@ After this, the workflow for a document becomes available with the
 
   doc = MyDocument()
   wf = doc.workflow()
+  wf = doc.workflow('workflow-name')
 
 The :meth:`~docflow.DocumentWorkflow.apply_on` method raises
 :class:`~docflow.WorkflowException` if the target class
-already has an attribute named :attr:`workflow`.
+already has a workflow with the same name.
 
 
 API Documentation
@@ -175,6 +178,11 @@ Package :mod:`docflow`
 
     The following attributes and methods must be overriden by subclasses of
     :class:`DocumentWorkflow`.
+
+    .. attribute:: name
+
+        The name of this workflow, default ``None``. Workflows can be referred
+        to by name when multiple workflows exist for a single document class.
 
     .. attribute:: state_attr
 
@@ -258,7 +266,7 @@ Package :mod:`docflow`
         ...     draft = WorkflowState(0, title="Draft")
         ...     pending = WorkflowState(1, title="Pending")
         ...     published = WorkflowState(2, title="Published")
-        ...     not_published = WorkflowStateGroup([0, 1], title="Not Published")
+        ...     not_published = WorkflowStateGroup([0, pending], title="Not Published")
         ...
         >>> wf = MyWorkflow(doc)
         >>> wf.draft()
@@ -272,7 +280,7 @@ Package :mod:`docflow`
 
     :class:`WorkflowStateGroup` instances cannot have transitions.
 
-    :param values: Valid values as specified in :class:`WorkflowState`
+    :param values: Status values or instances of :class:`WorkflowState`
     :type values: ``list``
     :param title: Optional title for this workflow state
     :param description: Optional description for this workflow state

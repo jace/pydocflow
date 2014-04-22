@@ -13,6 +13,11 @@ try:
 except ImportError:  # pragma: no cover
     from ordereddict import OrderedDict
 
+try:
+    from blinker import Signal
+except ImportError:
+    Signal = None
+
 from ._version import __version__
 
 __all__ = ['DocumentWorkflow', 'WorkflowState', 'WorkflowStateGroup', 'InteractiveTransition']
@@ -121,6 +126,7 @@ class WorkflowState(object):
         self.description = description
         self._parent = None
         self._transitions = OrderedDict()
+
         _set_creation_order(self)
 
     def attach(self, workflow):
@@ -150,7 +156,7 @@ class WorkflowState(object):
         return not self.__eq__(other)
 
     def transition(self, state_to, permission,
-                   title='', description='', category='', **kwargs):
+                   name=None, title='', description='', category='', **kw):
         """
         Decorator for transition functions.
         """
@@ -158,14 +164,15 @@ class WorkflowState(object):
             if hasattr(f, '_workflow_transition_inner'):
                 f = f._workflow_transition_inner
 
+            workflow_name = name or f.__name__
+
             @wraps(f)
             def decorated_function(workflow, *args, **kwargs):
                 # Perform tests: is state correct? Is permission available?
-                if f.__name__ not in workflow.state._transitions:
+                if workflow_name not in workflow.state._transitions:
                     raise self.exception_transition("Incorrect state")
-                t = workflow.state._transitions[f.__name__]
-                if t.permission and (t.permission not in
-                                     workflow.permissions()):
+                t = workflow.state._transitions[workflow_name]
+                if t.permission and (t.permission not in workflow.permissions()):
                     raise self.exception_permission(
                         "Permission not available")
                 result = f(workflow, *args, **kwargs)
@@ -174,6 +181,7 @@ class WorkflowState(object):
                     def workflow_submit(self, *args, **kwargs):
                         r = f.submit(self, *args, **kwargs)
                         workflow._setStateValue(t.state_to().value)
+                        t.signal.send(t)
                         return r
                     if six.PY3:  # pragma: no cover
                         result.submit = MethodType(workflow_submit, result)
@@ -181,20 +189,38 @@ class WorkflowState(object):
                         result.submit = MethodType(workflow_submit, result, f)
                 else:
                     workflow._setStateValue(t.state_to().value)
+                    t.signal.send(t)
 
                 return result
 
-            t = WorkflowTransition(name=f.__name__,
+            t = WorkflowTransition(name=workflow_name,
                                    title=title,
                                    description=description,
                                    category=category,
                                    permission=permission,
                                    state_from=self,
                                    state_to=state_to,
-                                   **kwargs)
-            self._transitions[f.__name__] = t
+                                   **kw)
+            self._transitions[workflow_name] = t
             decorated_function._workflow_transition_inner = f
+            if Signal is not None:
+                if not hasattr(decorated_function, 'signal'):
+                    decorated_function.signal = Signal()
+            else:
+                decorated_function.signal = None
+            t.signal = decorated_function.signal
             return decorated_function
+        return inner
+
+    def transition_from(self, state_from, permission, **kwargs):
+        """
+        The reverse of :meth:`WorkflowState.transition`, specifies a transition to this
+        state from one or more source states. Does not accept WorkflowStateGroup.
+        """
+        def inner(f):
+            states = [state_from] if isinstance(state_from, WorkflowState) else state_from
+            for state in states:
+                return state.transition(self, permission, **kwargs)(f)
         return inner
 
 
@@ -218,7 +244,7 @@ class WorkflowStateGroup(WorkflowState):
         return self._parent()._getStateValue() in self.value
 
     def transition(self, *args, **kwargs):
-        raise SyntaxError("WorkflowStateGroup instances cannot have transitions")
+        raise SyntaxError("WorkflowStateGroups cannot have transitions")
 
 
 class _InitDocumentWorkflow(type):

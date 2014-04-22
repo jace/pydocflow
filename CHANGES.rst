@@ -2,6 +2,7 @@
 -----
 
 - Transition handlers can now connect multiple from/to states
+- New: transition_from for specifying a transition in reverse
 - New: interactive transitions with form/validate/submit methods
 - Python 3 compatibility
 - Support for multiple workflows per document class, with workflow names

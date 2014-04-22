@@ -4,7 +4,7 @@ import six
 import unittest
 from docflow import (DocumentWorkflow, WorkflowState, WorkflowStateGroup, WorkflowException,
                      WorkflowStateException, WorkflowTransitionException, WorkflowPermissionException,
-                     InteractiveTransition)
+                     WorkflowTransition, InteractiveTransition)
 
 
 class MyDocument(object):
@@ -73,6 +73,13 @@ class MyDocumentWorkflow(DocumentWorkflow):
     @pending.transition(withdrawn, None, title='Withdraw')
     @published.transition(withdrawn, None, title='Withdraw')
     def withdraw(self):
+        """
+        Withdraw the document.
+        """
+        pass  # State will change automatically
+
+    @withdrawn.transition_from([draft, pending, published], None, title='Also Withdraw')
+    def also_withdraw(self):
         """
         Withdraw the document.
         """
@@ -178,11 +185,24 @@ class TestWorkflow(unittest.TestCase):
         wf.submit()
         self.assertEqual(wf.state, wf.pending)
 
+    def test_transition_signal(self):
+        @MyDocumentWorkflow.submit.signal.connect
+        def set_signalled(sender):
+            self.signalled = sender
+
+        self.signalled = None
+        doc = MyDocument()
+        doc.status = 0
+        wf = MyDocumentWorkflow(doc)
+        wf.submit()
+        self.assertNotEqual(self.signalled, False)
+        self.assertTrue(isinstance(self.signalled, WorkflowTransition))
+
     def test_transition_list(self):
         doc = MyDocument()
         doc.status = 0
         wf = MyDocumentWorkflow(doc)
-        self.assertEqual(len(wf.transitions()), 2)
+        self.assertEqual(len(wf.transitions()), 3)
         self.assertEqual(wf.transitions()['submit'].title, 'Submit')
 
     def test_invalid_transitions(self):
@@ -221,6 +241,14 @@ class TestWorkflow(unittest.TestCase):
         doc.status = MyDocumentWorkflow.published.value
         self.assertEqual(wf.state, wf.published)
         wf.withdraw()
+        self.assertEqual(wf.state, wf.withdrawn)
+
+    def transition_from(self):
+        doc = MyDocument()
+        doc.status = MyDocumentWorkflow.draft.value
+        wf = MyDocumentWorkflow(doc, context={'is_admin': True})
+        self.assertEqual(wf.state, wf.draft)
+        wf.also_withdraw()
         self.assertEqual(wf.state, wf.withdrawn)
 
     def test_inherited_workflow(self):

@@ -181,7 +181,8 @@ class WorkflowState(object):
                     def workflow_submit(self, *args, **kwargs):
                         r = f.submit(self, *args, **kwargs)
                         workflow._setStateValue(t.state_to().value)
-                        t.signal.send(t)
+                        if t.signal is not None:
+                            t.signal.send(t)
                         return r
                     if six.PY3:  # pragma: no cover
                         result.submit = MethodType(workflow_submit, result)
@@ -189,7 +190,8 @@ class WorkflowState(object):
                         result.submit = MethodType(workflow_submit, result, f)
                 else:
                     workflow._setStateValue(t.state_to().value)
-                    t.signal.send(t)
+                    if t.signal is not None:
+                        t.signal.send(t)
 
                 return result
 

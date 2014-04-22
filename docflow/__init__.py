@@ -345,7 +345,9 @@ class DocumentWorkflow(six.with_metaclass(_InitDocumentWorkflow)):
     def permissions(self):
         """
         Permissions available in the current context. This method must be
-        overridden by subclasses.
+        overridden by subclasses. Context is available as self.context,
+        set when the workflow was initialized for the document. It is not
+        passed as a parameter to this method.
         """
         return []
 

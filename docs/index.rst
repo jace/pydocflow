@@ -44,7 +44,7 @@ Documents can be simple dictionaries::
 
   >>> doc2 = {'title': 'My Document', 'status': 0}
 
-Or complex entities such as SQLAlchemy ::
+Or complex entities such as SQLAlchemy models::
 
   >>> from sqlalchemy import Column, Integer, String
   >>> from sqlalchemy.ext.declarative import declarative_base
@@ -70,6 +70,9 @@ represents this state, and the transitions between states::
       Workflow for MyDocument
       """
 
+      # Optional name for this workflow
+      name = None
+
       # Attribute in MyDocument to store status in.
       # Use ``state_key`` if MyDocument is a dictionary,
       # as is typical with NoSQL JSON-based databases.
@@ -86,12 +89,11 @@ represents this state, and the transitions between states::
       # Define a state group (with either values or WorkflowState instances)
       not_published = WorkflowStateGroup([0, pending], title="Not Published")
 
-      def permissions(self, context=None):
+      def permissions(self):
           """
           Return permissions available to current user. A permission can be any hashable token.
-          The ``context`` is any value passed in by the caller (we assume a dict here).
           """
-          if context and context.get('is_admin'):
+          if self.context and self.context.get('is_admin'):
               return ['can_publish']
           else:
               return []
@@ -99,7 +101,7 @@ represents this state, and the transitions between states::
       # Define a transition. There can be multiple transitions connecting any two states.
       # Parameters: newstate, permission, title, description
       @draft.transition(pending, None, title='Submit')
-      def submit(self, context=None):
+      def submit(self):
           """
           Change workflow state from draft to pending.
           """
@@ -109,7 +111,7 @@ represents this state, and the transitions between states::
 
       @pending.transition(published, 'can_publish', title="Publish")
       @withdrawn.transition(published, 'can_publish', title="Publish")
-      def publish(self, context=None):
+      def publish(self):
           """
           Publish the document.
           """
@@ -128,10 +130,11 @@ Or override settings::
       state_attr = None
       state_key = 'status'
 
-Transitions take an optional :attr:`context` parameter. The same context is
-provided to the :meth:`~docflow.DocumentWorkflow.permissions` method to
-determine if the caller has permission to make the transition. Once a workflow
-has been defined, usage is straightforward::
+Workflows take an optional :attr:`context` parameter when being initialized
+with a document. This context is available to the
+:meth:`~docflow.DocumentWorkflow.permissions` method to determine if the
+caller has permission to make the transition. Once a workflow has been
+defined, usage is straightforward::
 
   >>> wf = MyDocumentWorkflow(doc1)
   >>> wf.state is wf.draft
@@ -162,6 +165,12 @@ After this, the workflow for a document becomes available with the
   doc = MyDocument()
   wf = doc.workflow()
   wf = doc.workflow('workflow-name')
+
+The ``workflow`` method does not provide a way to supply a
+``context``, so it must be added later, if required::
+
+  wf = doc.workflow()
+  wf.context = context
 
 The :meth:`~docflow.DocumentWorkflow.apply_on` method raises
 :class:`~docflow.WorkflowException` if the target class

@@ -389,14 +389,14 @@ class TestWorkflow(unittest.TestCase):
         Instantiating a workflow does not clobber the workflow class.
         """
         for state in MyDocumentWorkflow._states.values():
-            self.assertIsNone(state._parent)
+            self.assertTrue(state._parent is None)
 
         doc = MyDocument()
         doc.status = 0
         workflow = MyDocumentWorkflow(doc)
 
         for state in MyDocumentWorkflow._states.values():
-            self.assertIsNone(state._parent)
+            self.assertTrue(state._parent is None)
 
         for state in workflow._states.values():
             self.assertFalse(state._parent is None)

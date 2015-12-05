@@ -7,6 +7,8 @@ from docflow import (DocumentWorkflow, WorkflowState, WorkflowStateGroup, Workfl
                      WorkflowTransition, InteractiveTransition)
 
 
+# --- Test document -----------------------------------------------------------
+
 class MyDocument(object):
     def __init__(self):
         self.status = None
@@ -14,6 +16,8 @@ class MyDocument(object):
         self.email_verified = False
         self.comments = None
 
+
+# --- Test workflows ----------------------------------------------------------
 
 class MyDocumentWorkflow(DocumentWorkflow):
     """
@@ -141,7 +145,7 @@ class MyDocumentExternalTransitions(DocumentWorkflow):
     """
     state_attr = 'status'
 
-    draft = WorkflowState(0, title="Draft",     description="Only owner can see it")
+    draft = WorkflowState(0, title="Draft", description="Only owner can see it")
     published = WorkflowState(1, title="Published", description="Published")
 
 
@@ -154,6 +158,8 @@ def publish_ext(workflow):
 def unpublish_ext(workflow):
     pass
 
+
+# -- Tests --------------------------------------------------------------------
 
 class TestWorkflow(unittest.TestCase):
     def test_no_default_state(self):
@@ -377,6 +383,23 @@ class TestWorkflow(unittest.TestCase):
         return_for_review.submit({'comments': 'test comment'})
         self.assertEqual(doc.status, 0)
         self.assertEqual(doc.comments, 'test comment')
+
+    def test_clobber_workflow_class(self):
+        """
+        Instantiating a workflow does not clobber the workflow class.
+        """
+        for state in MyDocumentWorkflow._states.values():
+            self.assertIsNone(state._parent)
+
+        doc = MyDocument()
+        doc.status = 0
+        workflow = MyDocumentWorkflow(doc)
+
+        for state in MyDocumentWorkflow._states.values():
+            self.assertIsNone(state._parent)
+
+        for state in workflow._states.values():
+            self.assertFalse(state._parent is None)
 
 
 if __name__ == '__main__':

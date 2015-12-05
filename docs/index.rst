@@ -107,7 +107,7 @@ represents this state, and the transitions between states::
           """
           # Do something here
           # ...
-          pass # State will be changed automatically if we don't raise an exception
+          pass  # State will be changed automatically if we don't raise an exception
 
       @pending.transition(published, 'can_publish', title="Publish")
       @withdrawn.transition(published, 'can_publish', title="Publish")
@@ -289,8 +289,7 @@ Package :mod:`docflow`
 
     :class:`WorkflowStateGroup` instances cannot have transitions.
 
-    :param values: Status values or instances of :class:`WorkflowState`
-    :type values: ``list``
+    :param list values: Status values or instances of :class:`WorkflowState`
     :param title: Optional title for this workflow state
     :param description: Optional description for this workflow state
 

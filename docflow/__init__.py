@@ -18,7 +18,7 @@ try:
 except ImportError:
     Signal = None
 
-from ._version import __version__
+from ._version import __version__  # NOQA
 
 __all__ = ['DocumentWorkflow', 'WorkflowState', 'WorkflowStateGroup', 'InteractiveTransition']
 
@@ -50,7 +50,7 @@ def _set_creation_order(instance):
     (typically within a single thread; the counter is not threadsafe).
 
     This code is from SQLAlchemy, available here:
-    http://www.sqlalchemy.org/trac/browser/lib/sqlalchemy/util/langhelpers.py#L836
+    https://github.com/zzzeek/sqlalchemy/blob/e45e4aa97d96421173da19d63f433795dad6e4e9/lib/sqlalchemy/util/langhelpers.py#L1224-L1237
 
     Only recommended for use at app load time.
     """
@@ -235,7 +235,7 @@ class WorkflowStateGroup(WorkflowState):
         # Convert all WorkflowState instances to values
         value = [item.value if isinstance(item, WorkflowState) else item for item in value]
         super(WorkflowStateGroup, self).__init__(value, title, description)
-        self.values = value
+        self.values = tuple(value)
 
     def __repr__(self):
         return '<WorkflowStateGroup %s>' % repr(self.title)
@@ -314,7 +314,9 @@ class DocumentWorkflow(six.with_metaclass(_InitDocumentWorkflow)):
         # Attach states to self. Make copy and iterate:
         # This code is used just to make it possible to test
         # if a state is active by calling it: workflow.draft(), etc
-        for statename, stateob in list(self._states.items()):
+        class_states = list(self._states.items())  # Copy states from the class
+        self._states = {}  # Replace _states in the instance with attached states
+        for statename, stateob in class_states:
             attached = stateob.attach(self)
             setattr(self, statename, attached)
             self._states[statename] = attached

@@ -1,6 +1,8 @@
 0.3.3
 -----
 
+- Bugfix: Instantiating a workflow would clobber the workflow class
+
 0.3.2
 -----
 

@@ -6,13 +6,13 @@ from setuptools import setup
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.rst')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
-versionfile = open(os.path.join(here, "docflow", "_version.py")).read()
+versionfile = open(os.path.join(here, 'docflow', '_version.py')).read()
 
 mo = re.search(r"^__version__\s*=\s*['\"]([^'\"]*)['\"]", versionfile, re.M)
 if mo:
     version = mo.group(1)
 else:
-    raise RuntimeError("Unable to find version string in coaster/_version.py.")
+    raise RuntimeError("Unable to find version string in docflow/_version.py.")
 
 if sys.hexversion < 0x2070000:
     # 2.6 and below require ordereddict

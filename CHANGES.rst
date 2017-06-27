@@ -1,3 +1,6 @@
+0.3.4
+-----
+
 0.3.3
 -----
 
@@ -25,7 +28,6 @@
 - Helper method to list available transitions
 - Subclasses can now override workflow exceptions
   (for framework-specific Forbidden handlers)
-
 
 0.2
 ---

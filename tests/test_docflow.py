@@ -167,7 +167,7 @@ class TestWorkflow(unittest.TestCase):
         self.assertRaises(WorkflowStateException, MyDocumentWorkflow, doc)
 
     def test_empty_document(self):
-        class Doc:
+        class Doc(object):
             pass
         doc = Doc()
         self.assertRaises(WorkflowStateException, MyDocumentWorkflow, doc)
